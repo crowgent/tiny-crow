@@ -1,4 +1,4 @@
-// Startup phases (port of src/startup.rs).
+// Startup phases.
 // Phase 1 init: context load, provider/model resolution, session
 // creation/resolution, client creation. Phase 2 initFeatures: live
 // pricing, sandbox, permission checker. Phase 3 resolvePrompts: version

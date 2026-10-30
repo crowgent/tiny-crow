@@ -1,4 +1,4 @@
-// Prompt files (port of src/context/prompts.rs).
+// Prompt files.
 // Precedence, lowest to highest: embedded defaults, the global prompts
 // dir, the project's data/prompts dir, .tiny-crow/prompts/, then each
 // extra dir in order (last wins). A prompt counts as a user file only

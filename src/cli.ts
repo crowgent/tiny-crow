@@ -1,4 +1,4 @@
-// Command-line interface (port of src/cli.rs).
+// Command-line interface.
 // Hand-rolled argument parser with the same flags as the original clap
 // definition. Feature-gated flags from the original (mcp, hooks, loop,
 // acp, git-worktree, advisor, status-signals) are present behind runtime

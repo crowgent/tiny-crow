@@ -1,4 +1,4 @@
-// Test-only fake model carrier, ported from src/tests/fake_model.rs.
+// Test-only fake model carrier.
 // A scripted model: each turn yields its text chunks in order, then ends.
 // Captures the history each turn received (minus the trailing prompt).
 export interface FakeRequest {

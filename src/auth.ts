@@ -1,4 +1,4 @@
-// API-key resolution (port of src/auth.rs).
+// API-key resolution.
 // Priority: CLI argument > environment variable > config file
 // (provider slug, then custom provider name). Ollama needs no key;
 // the Zen gateway serves its free models with a public credential.

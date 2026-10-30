@@ -1,4 +1,4 @@
-// Retry with exponential backoff and jitter (port of src/retry.rs).
+// Retry with exponential backoff and jitter.
 
 export interface RetryConfig {
   maxAttempts: number;

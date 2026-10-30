@@ -1,4 +1,4 @@
-// Token pricing (port of src/pricing.rs).
+// Token pricing.
 
 export const ANTHROPIC_CACHE_WRITE_MULT = 1.25;
 export const ANTHROPIC_CACHE_READ_MULT = 0.1;

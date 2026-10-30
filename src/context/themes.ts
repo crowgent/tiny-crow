@@ -1,4 +1,4 @@
-// Theme files (port of src/context/themes.rs).
+// Theme files.
 // Precedence, lowest to highest: embedded defaults, the global themes
 // dir, the project's data/themes dir. apply() parses a theme's color
 // config and hands background colors to the renderer; a theme without a

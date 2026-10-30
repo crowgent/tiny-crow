@@ -1,4 +1,4 @@
-// Logging and crash reports (port of src/logging.rs).
+// Logging and crash reports.
 import { mkdirSync, writeFileSync, createWriteStream } from "node:fs";
 import * as path from "node:path";
 import { dataDir } from "./config/load.ts";

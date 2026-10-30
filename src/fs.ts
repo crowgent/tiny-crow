@@ -1,4 +1,4 @@
-// Filesystem helpers (port of src/fs.rs).
+// Filesystem helpers.
 import { chmod, mkdir, readlink, rename, stat, writeFile, lstat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import * as path from "node:path";

@@ -1,4 +1,4 @@
-// Context files: AGENTS.md, prompts, themes (port of src/context/mod.rs).
+// Context files: AGENTS.md, prompts, themes.
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 import { configDirPath, dataDir } from "../config/load.ts";

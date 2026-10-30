@@ -1,4 +1,4 @@
-// Runtime docs (port of src/docs.rs).
+// Runtime docs.
 // The original bakes eight guide files into the binary and copies them to
 // the global docs dir when the version changes. In this port the guides
 // live in the project's docs directory (owned by the docs/system slice);

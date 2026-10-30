@@ -1,4 +1,4 @@
-// Entry point (port of src/main.rs).
+// Entry point.
 // Run: node src/main.ts [OPTIONS] [MESSAGE]...
 // Orchestration only: CLI parsing, logging, config load, --print-config,
 // --setup, --tutor, session listing, docs versioning, then Startup phases.

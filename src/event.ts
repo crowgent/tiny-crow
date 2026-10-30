@@ -1,4 +1,4 @@
-// Agent and user events (port of src/event.rs).
+// Agent and user events.
 // No framework types here: key events are represented as a plain
 // structural type so the core slice does not depend on a TUI library;
 // the ui slice maps its own key events onto KeyEvent.

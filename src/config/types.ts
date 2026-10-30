@@ -1,4 +1,4 @@
-// Configuration value types (port of src/config/types.rs).
+// Configuration value types.
 // Plain data shapes; parsing/normalisation lives in config/load.ts and
 // config/mod.ts. JSON field names keep the Rust serde renames
 // (e.g. "brainstorm-to-plan", "sandbox-backend") so existing config files

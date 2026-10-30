@@ -1,4 +1,4 @@
-// Bubblewrap/zerobox sandboxing (port of src/sandbox.rs).
+// Bubblewrap/zerobox sandboxing.
 // Command construction is pure (wrapCommand returns argv); execution
 // uses node:child_process. Credential masking, network unsharing and
 // sandbox-expose validation mirror the original exactly.

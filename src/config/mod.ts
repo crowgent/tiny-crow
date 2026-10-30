@@ -1,4 +1,4 @@
-// Resolved configuration (port of src/config/mod.rs).
+// Resolved configuration.
 // Re-exports config/load.ts and config/types.ts. Field names are camelCase
 // in TypeScript; configFromJson/configToJson translate to/from the on-disk
 // snake_case (plus hyphenated) names used by existing config files.

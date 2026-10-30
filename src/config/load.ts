@@ -1,4 +1,4 @@
-// Config loading, saving and merging (port of src/config/load.rs).
+// Config loading, saving and merging.
 // Includes small TOML and YAML parsers (no external dependencies) covering
 // the shapes config files actually use: scalars, arrays, inline tables,
 // [tables], dotted keys and [[array-of-tables]] for TOML; indentation maps

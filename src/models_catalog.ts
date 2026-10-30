@@ -1,4 +1,4 @@
-// Static, embedded model catalog (port of src/models_catalog.rs).
+// Static, embedded model catalog.
 // Model ids change rarely between releases, so instead of hitting each
 // provider's /models endpoint at startup (slow, and it used to block the
 // first frame), a snapshot is baked in. The picker is seeded from this

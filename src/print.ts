@@ -1,4 +1,4 @@
-// --print-config and session listing output (port of src/print.rs).
+// --print-config and session listing output.
 // Session reading mirrors session storage's find_recent_sessions locally
 // (data dir / sessions, newest first by mtime) until the session slice
 // exposes it; the printed shape is identical.

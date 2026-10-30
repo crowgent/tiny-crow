@@ -1,4 +1,4 @@
-// Generic embedded-resource loading (port of src/context/resources.rs).
+// Generic embedded-resource loading.
 // The original takes an include_dir Dir; here embedded resources are a
 // filename -> content map, which is what the TS prompts/themes modules
 // carry. Precedence: embedded, then global dir, then local dir.

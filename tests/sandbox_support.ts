@@ -1,4 +1,4 @@
-// Shared sandbox-test scaffolding, ported from src/tests/sandbox_support.rs.
+// Shared sandbox-test scaffolding.
 import * as os from "node:os";
 import * as path from "node:path";
 import { Sandbox } from "../src/sandbox.ts";
