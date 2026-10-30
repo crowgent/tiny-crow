@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}}</title>
+<style>
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: #101014; color: #d7dae8; font-family: Georgia, "Times New Roman", serif;
+  max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.25rem; line-height: 1.7; }
+.session-head { border-bottom: 2px solid #2a2a35; padding-bottom: 1rem; margin-bottom: 0.5rem; }
+.session-head h1 { font-size: 1.6rem; line-height: 1.3; margin: 0 0 0.4rem; }
+.session-info { color: #8a8fa8; font-size: 0.9rem; font-family: ui-sans-serif, system-ui, sans-serif; }
+.entry { padding: 1rem 0; border-bottom: 1px solid #23232e; }
+.entry .who { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.72rem;
+  text-transform: uppercase; letter-spacing: 0.12em; color: #8a8fa8; margin-bottom: 0.5rem; }
+.entry.user .who { color: #a8c686; }
+.entry.assistant .who { color: #8fb0f0; }
+.entry pre { white-space: pre-wrap; overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.88rem; margin: 0; }
+.entry.tool pre { color: #8a8fa8; }
+.entry .markdown pre { background: #17171f; padding: 0.75rem; border-radius: 6px; overflow-x: auto; }
+.entry .markdown code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.88rem; }
+.session-foot { color: #8a8fa8; font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.78rem; margin-top: 2.5rem; text-align: center; }
+</style>
+</head>
+<body>
+<section class="session-head">
+<h1>{{title}}</h1>
+<p class="session-info">{{meta}}</p>
+</section>
+<section class="transcript">
+{{messages}}
+</section>
+<p class="session-foot">Exported with tiny-crow</p>
+</body>
+</html>

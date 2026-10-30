@@ -1,0 +1,32 @@
+{% set name = "tiny-crow" %}
+{% set version = "1.8.5" %}
+
+package:
+  name: {{ name }}
+  version: {{ version }}
+
+source:
+  # Local source tree (the repository root, three levels above this
+  # recipe). No download location is invented here.
+  path: ../../..
+
+build:
+  number: 0
+
+requirements:
+  build:
+    - nodejs >=24
+  host:
+    - nodejs >=24
+  run:
+    - nodejs >=24
+
+test:
+  commands:
+    - tiny-crow --help
+    - tiny-crow --version
+
+about:
+  summary: Minimal coding agent TUI, ported to TypeScript
+  license: GPL-3.0-only
+  license_file: LICENSE

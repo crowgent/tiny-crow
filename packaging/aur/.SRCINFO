@@ -1,0 +1,12 @@
+pkgbase = tiny-crow
+	pkgdesc = Minimal coding agent TUI, ported to TypeScript
+	pkgver = 1.8.5
+	pkgrel = 1
+	arch = any
+	license = GPL-3.0-only
+	makedepends = npm
+	depends = nodejs>=24
+	source = tiny-crow-1.8.5.tar.gz
+	sha256sums = SKIP
+
+pkgname = tiny-crow
