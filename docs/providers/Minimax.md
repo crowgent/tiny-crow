@@ -1,24 +1,25 @@
 ---
-description: "Use MiniMax models with zerostack-ts through an OpenAI-compatible custom provider."
+description: "Use MiniMax models with tiny-crow through an OpenAI-compatible custom provider."
 ---
 
 # MiniMax
 
-MiniMax is available in zerostack-ts through custom provider definitions. The
-configuration below keeps the API protocol and region explicit while sharing a
-single `MINIMAX_API_KEY` environment variable.
+MiniMax is available in tiny-crow through custom provider definitions.
+The configuration below keeps the API protocol and region explicit
+while sharing a single `MINIMAX_API_KEY` environment variable.
 
-## Credentials
+## Your API key
 
-Set the API key in your shell instead of storing it in the zerostack-ts config:
+Set the key in your shell rather than storing it in the tiny-crow
+config:
 
 ```bash
 export MINIMAX_API_KEY="your-api-key"
 ```
 
-## Provider Routes
+## The four routes
 
-Add the routes you need to `~/.config/zerostack/config.toml`:
+Add the routes you need to `~/.config/tiny-crow/config.toml`:
 
 ```toml
 [custom_providers.minimax-global-openai]
@@ -49,19 +50,19 @@ model = "MiniMax-M3"
 ```
 
 Keep each Anthropic-compatible `base_url` ending in `/anthropic`. The
-Anthropic client appends `/v1/messages` when it sends a request, so do not add
-`/v1` to the configured base URL.
+Anthropic client appends `/v1/messages` when it sends a request, so do
+not add `/v1` to the configured base URL.
 
 Select any route and model with the standard CLI flags:
 
 ```bash
-zerostack-ts --provider minimax-global-openai --model MiniMax-M3
-zerostack-ts --provider minimax-cn-openai --model MiniMax-M2.7
-zerostack-ts --provider minimax-global-anthropic --model MiniMax-M3
-zerostack-ts --provider minimax-cn-anthropic --model MiniMax-M2.7
+tiny-crow --provider minimax-global-openai --model MiniMax-M3
+tiny-crow --provider minimax-cn-openai --model MiniMax-M2.7
+tiny-crow --provider minimax-global-anthropic --model MiniMax-M3
+tiny-crow --provider minimax-cn-anthropic --model MiniMax-M2.7
 ```
 
-## Model Configuration
+## Models, context, and pricing
 
 | Model | Context window | Input modes | Thinking | Input | Output | Cache read | Cache write |
 | ----- | -------------: | ----------- | -------- | ----: | -----: | ---------: | ----------: |
@@ -78,8 +79,8 @@ service-tier pricing:
 | priority | up to 512,000 tokens | $0.45 | $1.80 | $0.09 |
 | priority | over 512,000 tokens | $0.90 | $3.60 | $0.18 |
 
-The optional quick-model entries below use the standard tier for their full
-configured context windows in zerostack-ts's local cost estimate:
+The optional quick-model entries below use the standard tier for their
+full configured context windows in tiny-crow's local cost estimate:
 
 ```toml
 [quick_models.minimax-m3]
@@ -98,5 +99,5 @@ output_token_cost = 1.2
 ```
 
 Switch to either entry with `--quick-model minimax-m3` or
-`--quick-model minimax-m2-7`. Change the `provider` value in a quick-model
-entry to use another route from the configuration above.
+`--quick-model minimax-m2-7`. Change the `provider` value in a
+quick-model entry to use another route from the configuration above.

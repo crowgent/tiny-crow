@@ -57,7 +57,7 @@ export {
   renderSession,
   sanitizeOutput,
   showWelcome,
-  ZEROSTACK_TS_VERSION,
+  TINY_CROW_VERSION,
 } from "./events.ts";
 export { Block, BlockStyle, blockColor, Feed, styleFromColor } from "./feed.ts";
 export { markdownToStyled, wordWrap } from "./markdown.ts";
@@ -933,7 +933,7 @@ export function contextExhaustedReport(
     `  reserved for response ....... ${reserve} tokens`,
     `  kept-recent budget .......... ${keepRecent} tokens`,
     "",
-    "This model and context-window combination is too small to run zerostack-ts's agentic loop on this task. To proceed you can:",
+    "This model and context-window combination is too small to run tiny-crow's agentic loop on this task. To proceed you can:",
     "  - increase context_window (and the model server's real KV cache) so the window clears the floor above;",
     `  - raise mid_turn_compact_threshold above ${pressurePct.toFixed(0)}% so this prompt fits under the ceiling (trades safety for room: the real KV cache must still hold ${promptTokens}+ tokens);`,
     "  - lower keep_recent_tokens or reserve_tokens to shrink the floor;",
@@ -970,7 +970,7 @@ export async function spawnMergeAgent(
     `  e. Follow their instruction.\n\n` +
     `7. If the merge succeeded (or conflicts were resolved and committed):\n` +
     `  - cd ${req.mainPath} and report completion.\n` +
-    `  - Do NOT run \`git worktree remove\` or \`git branch -d\`: zerostack-ts verifies the merge and cleans up itself.\n\n` +
+    `  - Do NOT run \`git worktree remove\` or \`git branch -d\`: tiny-crow verifies the merge and cleans up itself.\n\n` +
     `Important: Do NOT skip any step. Always check for conflicts after merge.`;
   ui.session.addMessage("user", prompt);
   const history = ui.convertHistory(ui.session);

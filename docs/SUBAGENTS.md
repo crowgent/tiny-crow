@@ -1,33 +1,35 @@
 ---
-description: "Parallel read-only subagents in zerostack-ts: the task tool, model and provider overrides, and per-agent tool limits."
+description: "Parallel read-only subagents in tiny-crow: the task tool, model and provider overrides, and per-agent tool limits."
 ---
 
-# Subagents (read-only codebase exploration)
+# Subagents: read-only codebase exploration
 
-## Overview
+## The idea
 
-Subagents let the main agent delegate **precise read-only investigations** to a
-**read-only child agent**. Each subagent receives a specific technical question
-(e.g. "Where is MCP support implemented?") and returns a focused answer.
-This keeps the main agent's context clean while enabling thorough lookups.
+Subagents let the main agent hand a **precise, read-only investigation**
+to a **read-only child agent**. Each subagent gets one specific
+technical question (for example, "Where is MCP support implemented?")
+and returns a focused answer. The main agent's context stays clean while
+the lookup is still thorough.
 
-Subagents are designed for **highly specific questions**, not wide exploration.
-Avoid broad instructions like "check all documentation" — instead ask precise
-questions that can be answered with a few file reads and searches.
+Subagents are built for **highly specific questions**, not wide
+exploration. Avoid broad instructions like "check all documentation" —
+instead ask precise questions that can be answered with a few file
+reads and searches.
 
-When the main agent calls the `task` tool, one subagent is spawned per prompt.
-If multiple prompts are given, they run in **parallel**. Each subagent has
-access only to read tools and returns a summary of findings, which the main
-agent then incorporates into its response.
+When the main agent calls the `task` tool, one subagent is spawned per
+prompt. If multiple prompts are given, they run in **parallel**. Each
+subagent has access only to read tools and returns a summary of
+findings, which the main agent then folds into its response.
 
 ## Availability
 
 Subagents are included in this build as an optional subsystem. Configure
 the subagent model and provider through the options in CONFIG.md.
 
-## The `task` Tool
+## The `task` tool
 
-The main agent has a new tool called `task`. It accepts:
+The main agent has a tool called `task`. It accepts:
 
 ```json
 {
@@ -39,7 +41,7 @@ The main agent has a new tool called `task`. It accepts:
 - **Multiple prompts**: subagents run concurrently. Each
   result appears under a `## Task N:` heading.
 
-## What the Subagent Can Do
+## What a subagent can use
 
 ### Read tools (always available)
 
@@ -58,7 +60,7 @@ The main agent has a new tool called `task`. It accepts:
 | `memory_read`   | Read memory files (long-term, notes…)  |
 | `memory_search` | Keyword search across all memory       |
 
-### Explicitly excluded
+### Deliberately left out
 
 | Tool           | Reason                                  |
 |----------------|-----------------------------------------|
@@ -68,19 +70,19 @@ The main agent has a new tool called `task`. It accepts:
 | `memory_write` | Subagent should not persist memory      |
 | `mcp_tool`     | External, unpredictable — out of scope  |
 
-## Security & Permissions
+## Why no permission system is safe here
 
-The subagent is built with **no permission system** (`permission: None` on all
-its tools). This is safe because it only has read tools:
+The subagent is built with **no permission system** (`permission: None`
+on all its tools). This is safe because it only has read tools:
 
-- **Read tools with `None` permission** will read any path without checks,
-  but they cannot write, edit, or execute commands.
-- The worst a subagent can do is read files, which is exactly what it is
-  designed for.
+- **Read tools with `None` permission** will read any path without
+  checks, but they cannot write, edit, or execute commands.
+- The worst a subagent can do is read files, which is exactly what it
+  is designed for.
 
-The main agent's `task` tool itself goes through the normal permission check
-(`check_perm("task", …)`), so users can allow/ask/deny it via their
-`opencode.json` permission rules.
+The main agent's `task` tool itself goes through the normal permission
+check (`check_perm("task", …)`), so users can allow/ask/deny it via
+their permission rules.
 
 ## Configuration
 
@@ -91,18 +93,18 @@ The main agent's `task` tool itself goes through the normal permission check
 | `subagent_model`       | `string`  | `none (uses main model)` | Model name or quick-model alias       |
 | `subagent_provider`    | `string`  | (same as main)      | Provider for the subagent (optional)  |
 
-### Model resolution (in order of precedence)
+### How the subagent model is picked (in order)
 
 1. `subagent_model` is set and matches a **quick model name** (e.g. `"deepseek-v4-flash"`) → uses that quick model's provider + model.
 2. `subagent_model` is set but does **not** match a quick model → uses the raw model string with `subagent_provider` (or the main provider as fallback).
 3. `subagent_model` is **not** set but `subagent_provider` is → uses the main model with the specified provider.
 4. Neither is set → falls back to the main agent's model (same provider + model).
 
-When the subagent uses a different provider than the main agent, a separate
-API client is created at startup. The subagent client is independent from the
-main agent's client and can be switched at runtime.
+When the subagent uses a different provider than the main agent, a
+separate API client is created at startup. The subagent client is
+independent from the main agent's client and can be switched at runtime.
 
-Example `opencode.json`:
+Example (in your config file):
 
 ```json
 {
@@ -113,24 +115,25 @@ Example `opencode.json`:
 }
 ```
 
-## Slash Commands
+## Slash commands for subagents
 
 | Command                            | Description                                |
 |------------------------------------|--------------------------------------------|
 | `/model-subagent [name]`           | Show or switch the subagent's model        |
 | `/models-subagent [name]`          | List quick models or switch subagent to one|
 
-- **`/model-subagent`** with no arguments shows the current subagent provider
-  and model. With a model name, it switches the subagent to that model (using
-  the same provider).
-- **`/models-subagent`** with no arguments lists quick models. With a quick
-  model name, it switches the subagent to that quick model's provider + model.
-  If the quick model uses a different provider, a new API client is created.
+- **`/model-subagent`** with no arguments shows the current subagent
+  provider and model. With a model name, it switches the subagent to
+  that model (using the same provider).
+- **`/models-subagent`** with no arguments lists quick models. With a
+  quick model name, it switches the subagent to that quick model's
+  provider + model. If the quick model uses a different provider, a new
+  API client is created.
 
-These commands update the global `SubagentConfig` at runtime. The next call
-to the `task` tool picks up the new settings automatically.
+These commands update the global `SubagentConfig` at runtime. The next
+call to the `task` tool picks up the new settings automatically.
 
-## Architecture
+## Internals
 
 ```
 Main Agent                               Subagent(s)
@@ -161,16 +164,17 @@ Key files:
 | `src/provider.ts` (`runSubagent`) | Provider dispatch                  |
 | `src/main.ts`                                | Initializes `SubagentConfig`          |
 
-## Subagent System Prompt
+## The subagent's own prompt
 
-The subagent receives its own system prompt focused on answering specific
-technical questions (`src/extras/subagents/prompt.ts`). It instructs the
-subagent to focus on the question given, use the available tools, and report
-findings concisely without preamble or wandering.
+The subagent receives its own system prompt focused on answering
+specific technical questions (`src/extras/subagents/prompt.ts`). It
+instructs the subagent to focus on the question given, use the available
+tools, and report findings concisely without preamble or wandering.
 
-## Parallel Execution
+## Running in parallel
 
-When multiple prompts are supplied, each runs as its own concurrent task.
-`futures::future::join_all` gathers the results. A failed subagent (panic or
-error) does not cancel the others — its output shows the error while the rest
-complete normally. Results are ordered by the original prompt index.
+When multiple prompts are supplied, each runs as its own concurrent
+task. Results are gathered together once all tasks finish. A failed
+subagent (panic or error) does not cancel the others — its output shows
+the error while the rest complete normally. Results are ordered by the
+original prompt index.

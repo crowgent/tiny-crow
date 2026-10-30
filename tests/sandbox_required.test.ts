@@ -22,7 +22,7 @@ function missingBackend(backend: string): Sandbox {
 }
 
 function scratchCacheDir(name: string): string {
-  return path.join(os.tmpdir(), `zerostack-sandbox-${name}-${process.pid}`);
+  return path.join(os.tmpdir(), `tiny-crow-sandbox-${name}-${process.pid}`);
 }
 
 test("test_required_backend_missing_refuses_wrap_command", () => {

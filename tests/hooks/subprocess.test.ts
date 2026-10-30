@@ -37,7 +37,7 @@ test("run_hook_reports_nonzero_exit_code", async () => {
 });
 
 test("run_hook_times_out_and_kills_group", async () => {
-  const marker = join(tmpdir(), `zerostack-hook-subprocess-timeout-${process.pid}`);
+  const marker = join(tmpdir(), `tiny-crow-hook-subprocess-timeout-${process.pid}`);
   rmSync(marker, { force: true });
   const command = `sh -c 'sleep 2; printf leaked > ${marker}' & wait`;
   const output = await runHook(command, undefined, Buffer.alloc(0), 100, "/repo");
@@ -47,9 +47,9 @@ test("run_hook_times_out_and_kills_group", async () => {
   rmSync(marker, { force: true });
 });
 
-test("run_hook_exposes_zerostack_project_dir_env_var", async () => {
+test("run_hook_exposes_tiny-crow_project_dir_env_var", async () => {
   const output = await runHook(
-    'echo "$ZEROSTACK_PROJECT_DIR"',
+    'echo "$TINY_CROW_PROJECT_DIR"',
     undefined,
     Buffer.alloc(0),
     2000,

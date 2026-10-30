@@ -252,13 +252,13 @@ test("compacted_context_returns_summary_after_compress", () => {
 });
 
 test("detect_git_branch_in_repo_returns_nonempty", () => {
-  const b = Session.detectGitBranch(path.join(os.homedir(), "workspace", "zerostack"));
+  const b = Session.detectGitBranch(process.cwd());
   assert.ok(b !== null, "repo root should resolve a branch or commit");
   assert.ok(b!.length > 0);
 });
 
 test("detect_git_branch_outside_repo_is_none", () => {
-  const p = path.join(os.tmpdir(), "zerostack-definitely-not-a-repo-xyz123");
+  const p = path.join(os.tmpdir(), "tiny-crow-definitely-not-a-repo-xyz123");
   assert.equal(Session.detectGitBranch(p), null);
 });
 

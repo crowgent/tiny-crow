@@ -295,7 +295,7 @@ export class McpClientHandle {
       {
         protocolVersion: MCP_PROTOCOL_VERSION,
         capabilities: {},
-        clientInfo: { name: "zerostack-ts", version: "1.0.5" },
+        clientInfo: { name: "tiny-crow", version: "1.0.5" },
       },
       connectTimeoutMs,
     );
@@ -315,7 +315,7 @@ export class McpClientHandle {
       params: {
         protocolVersion: MCP_PROTOCOL_VERSION,
         capabilities: {},
-        clientInfo: { name: "zerostack-ts", version: "1.0.5" },
+        clientInfo: { name: "tiny-crow", version: "1.0.5" },
       },
     };
     const timeout = new Promise<never>((_, reject) =>

@@ -20,13 +20,13 @@ export const MAX_INJECT_BYTES = 32 * 1024;
 export const MAX_WRITE_BYTES = 64 * 1024;
 
 export function memoryDataDir(): string {
-  if (process.env.ZS_DATA_DIR) return process.env.ZS_DATA_DIR.replace(/^~/, homedir());
+  if (process.env.TC_DATA_DIR) return process.env.TC_DATA_DIR.replace(/^~/, homedir());
   const base = process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share");
-  return join(base, "zerostack-ts");
+  return join(base, "tiny-crow");
 }
 
 export function memoryConfigDir(): string {
-  if (process.env.ZS_CONFIG_DIR) return process.env.ZS_CONFIG_DIR.replace(/^~/, homedir());
+  if (process.env.TC_CONFIG_DIR) return process.env.TC_CONFIG_DIR.replace(/^~/, homedir());
   return memoryDataDir();
 }
 

@@ -210,7 +210,7 @@ export function mergeDecisions(outputs: HookOutput[]): Decision {
 
 /**
  * The dispatcher seam: accepts only strings/JSON and returns only
- * zerostack-ts-owned `Decision`/`PreDecision` values.
+ * tiny-crow-owned `Decision`/`PreDecision` values.
  */
 export class HookDispatcher {
   private events: Map<string, MatcherEntry[]>;

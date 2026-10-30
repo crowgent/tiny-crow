@@ -157,9 +157,9 @@ test("cwd_full_vs_cwd_folder", () => {
     lines: [{ segments: [seg("cwd"), seg("separator"), seg("cwd_full")] }],
   };
   const session = Session.create("openrouter", "m", 1000, "");
-  session.workingDir = "/var/lib/zerostack-demo/project";
+  session.workingDir = "/var/lib/tiny-crow-demo/project";
   const lines = buildLines(spec, asStatusSession(session), ctx());
-  assert.equal(lineText(lines[0]!), "project /var/lib/zerostack-demo/project");
+  assert.equal(lineText(lines[0]!), "project /var/lib/tiny-crow-demo/project");
 });
 
 test("always_shows_zero_tokens", () => {

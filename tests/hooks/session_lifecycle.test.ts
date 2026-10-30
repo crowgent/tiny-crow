@@ -38,7 +38,7 @@ function ctx(): HookCtx {
 }
 
 function marker(name: string): string {
-  return join(tmpdir(), `zerostack-hooks-${name}-${process.pid}`);
+  return join(tmpdir(), `tiny-crow-hooks-${name}-${process.pid}`);
 }
 
 test("session_start_runs_the_matching_hook_with_source", async () => {

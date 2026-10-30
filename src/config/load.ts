@@ -22,30 +22,30 @@ import {
 } from "./mod.ts";
 import { parseEditSystem } from "./types.ts";
 
-export const LOCAL_CONFIG_PATH = ".zerostack/config.toml";
+export const LOCAL_CONFIG_PATH = ".tiny-crow/config.toml";
 const CONFIG_CANDIDATES = ["config.toml", "config.yaml", "config.yml", "config.json"] as const;
 
 export function homeDir(): string | undefined {
   return process.env["HOME"] || os.homedir() || undefined;
 }
 
-/** Mirrors session storage data_dir: ZS_DATA_DIR, else the OS data dir. */
+/** Mirrors session storage data_dir: TC_DATA_DIR, else the OS data dir. */
 export function dataDir(): string {
-  const override = process.env["ZS_DATA_DIR"];
+  const override = process.env["TC_DATA_DIR"];
   if (override) return expandTilde(override);
   const xdg = process.env["XDG_DATA_HOME"];
-  if (xdg) return path.join(xdg, "zerostack");
+  if (xdg) return path.join(xdg, "tiny-crow");
   const home = homeDir();
   if (home) {
-    if (process.platform === "darwin") return path.join(home, "Library", "Application Support", "zerostack");
-    return path.join(home, ".local", "share", "zerostack");
+    if (process.platform === "darwin") return path.join(home, "Library", "Application Support", "tiny-crow");
+    return path.join(home, ".local", "share", "tiny-crow");
   }
-  return path.join(".", "zerostack");
+  return path.join(".", "tiny-crow");
 }
 
-/** Mirrors session storage config_path: ZS_CONFIG_DIR, else data_dir. */
+/** Mirrors session storage config_path: TC_CONFIG_DIR, else data_dir. */
 export function configDirPath(): string {
-  const override = process.env["ZS_CONFIG_DIR"];
+  const override = process.env["TC_CONFIG_DIR"];
   if (override) return expandTilde(override);
   return dataDir();
 }
@@ -59,19 +59,19 @@ export function pickExisting(dir: string): string {
 }
 
 function resolveConfigPath(): string {
-  if (process.env["ZS_CONFIG_DIR"]) {
-    return pickExisting(expandTilde(process.env["ZS_CONFIG_DIR"]!));
+  if (process.env["TC_CONFIG_DIR"]) {
+    return pickExisting(expandTilde(process.env["TC_CONFIG_DIR"]!));
   }
   const xdgConfig = process.env["XDG_CONFIG_HOME"];
   const candidates: string[] = [];
-  if (xdgConfig) candidates.push(path.join(xdgConfig, "zerostack"));
+  if (xdgConfig) candidates.push(path.join(xdgConfig, "tiny-crow"));
   else {
     const home = homeDir();
     if (home) {
       candidates.push(
         process.platform === "darwin"
-          ? path.join(home, "Library", "Application Support", "zerostack")
-          : path.join(home, ".config", "zerostack"),
+          ? path.join(home, "Library", "Application Support", "tiny-crow")
+          : path.join(home, ".config", "tiny-crow"),
       );
     }
   }

@@ -6,17 +6,17 @@ import { HookDispatcher } from "./dispatcher.ts";
 import { parseHooksConfig, type HookGroup, type HookHandler, type HooksConfig } from "./settings.ts";
 
 export function dataDir(): string {
-  if (process.env.ZS_DATA_DIR) {
-    const dir = process.env.ZS_DATA_DIR.replace(/^~/, homedir());
+  if (process.env.TC_DATA_DIR) {
+    const dir = process.env.TC_DATA_DIR.replace(/^~/, homedir());
     return dir;
   }
   const base = process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share");
-  return join(base, "zerostack-ts");
+  return join(base, "tiny-crow");
 }
 
 export function configDir(): string {
-  if (process.env.ZS_CONFIG_DIR) {
-    return process.env.ZS_CONFIG_DIR.replace(/^~/, homedir());
+  if (process.env.TC_CONFIG_DIR) {
+    return process.env.TC_CONFIG_DIR.replace(/^~/, homedir());
   }
   const base = process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config");
   return base;
@@ -79,21 +79,21 @@ export function saveTrustStore(path: string, trusted: Set<string>): void {
 }
 
 export function globalSettingsPath(): string {
-  return join(configDir(), "zerostack-ts", "settings.json");
+  return join(configDir(), "tiny-crow", "settings.json");
 }
 
 export function projectSettingsPath(): string {
-  return join(".zerostack", "settings.json");
+  return join(".tiny-crow", "settings.json");
 }
 
 export function managedSettingsPath(): string {
   if (process.platform === "darwin") {
-    return "/Library/Application Support/zerostack-ts/managed-settings.json";
+    return "/Library/Application Support/tiny-crow/managed-settings.json";
   }
   if (process.platform === "win32") {
-    return "C:\\ProgramData\\zerostack-ts\\managed-settings.json";
+    return "C:\\ProgramData\\tiny-crow\\managed-settings.json";
   }
-  return "/etc/zerostack-ts/managed-settings.json";
+  return "/etc/tiny-crow/managed-settings.json";
 }
 
 /** Prompt the user to confirm an untrusted project hook (plain y/N style). */

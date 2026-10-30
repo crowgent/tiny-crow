@@ -1,31 +1,47 @@
 ---
-description: "HashEdit — zerostack-ts's CRC-tagged file editing system for token-efficient, conflict-safe agent edits: algorithm specification."
+description: "HashEdit — tiny-crow's CRC-tagged file editing system for token-efficient, conflict-safe agent edits: algorithm specification."
 ---
 
-# Hash-Anchored Edits: Algorithm Specification
+# Hash-Anchored Editing: How It Works
 
-## Overview
+## The problem it solves
 
-Hash-anchored edits are a mechanism for making targeted, conflict-safe modifications to source files. Instead of using line numbers (which shift when lines are added or removed elsewhere), every line is assigned a **stable word anchor** that follows the line wherever it moves within the file. As long as a line's content has not changed, it retains the same anchor word even after other lines are inserted or deleted around it.
+Line numbers shift whenever lines are added or removed elsewhere in a
+file, so an edit addressed by line number can land in the wrong place.
+Hash-anchored editing fixes that by giving every line a **stable word
+anchor** that follows the line wherever it moves. As long as a line's
+content has not changed, it keeps the same anchor even after other
+lines are inserted or deleted around it.
 
-The system has two phases:
+There are two phases:
 
-1. **Read phase** — A file is read from disk, each line is assigned a stable anchor word, and the result is presented with anchors prepended.
-2. **Edit phase** — An edit targeting specific anchors is received, validated, and applied. Validation verifies both that the anchor still exists AND that the line content at that anchor still matches what was expected.
+1. **Reading** — A file is read from disk, each line gets a stable
+   anchor word, and the result is presented with anchors prepended.
+2. **Editing** — An edit addressed to specific anchors is received,
+   validated, and applied. Validation checks both that the anchor still
+   exists AND that the line content at that anchor still matches what
+   was expected.
 
 ---
 
-## 1. Core Concepts
+## 1. Anchors, delimiters, and hashes
 
-### 1.1 Anchor Words
+### 1.1 What an anchor word is
 
-An anchor word is a human-readable token assigned to each line of a file. Anchors are formed by concatenating words drawn from a fixed dictionary of ~1,720 common English words (e.g., `PopoverSpawner`, `HelveticaDebugger`, `AppleBanana`). The concatenation of two dictionary words yields ~3 million unique combinations, which is sufficient for all practical file sizes.
+An anchor word is a human-readable token assigned to each line of a
+file. Anchors are formed by concatenating words drawn from a fixed
+dictionary of ~1,720 common English words (for example
+`PopoverSpawner`, `HelveticaDebugger`, `AppleBanana`). Concatenating two
+dictionary words yields ~3 million unique combinations, which is
+sufficient for all practical file sizes.
 
-Format: `{Word1}{Word2}` e.g. `PopoverSpawner`
+Format: `{Word1}{Word2}`, e.g. `PopoverSpawner`
 
-### 1.2 Anchor Delimiter
+### 1.2 How anchors are shown
 
-When a line is displayed to the LLM, the anchor word is prepended followed by a delimiter character. The delimiter is a non-printable or low-visibility character (the section sign `§`). The format is:
+When a line is displayed to the LLM, the anchor word is prepended,
+followed by a delimiter character. The delimiter is a non-printable or
+low-visibility character (the section sign `§`). The format is:
 
 ```
 {AnchorWord}§{line_content}
@@ -39,19 +55,25 @@ HelveticaDebugger§    total = 0
 AppleBanana§    for item in items:
 ```
 
-### 1.3 File-Level Content Hash
+### 1.3 The whole-file hash
 
-A separate, simpler non-cryptographic hash (32-bit) of the entire file content is used to detect whether a file has changed between reads. This is purely an optimization to avoid re-transmitting unchanged content.
+A separate, simpler non-cryptographic hash (32-bit) of the entire file
+content is used to detect whether a file has changed between reads.
+This is purely an optimisation to avoid re-transmitting unchanged
+content.
 
-### 1.4 Line-Level Hash
+### 1.4 The per-line hash
 
-Each line is hashed individually using a 32-bit non-cryptographic hash (FNV-1a). This hash is used internally for the diff-based reconciliation algorithm — it is never exposed to the LLM. The hash serves as a compact proxy for line content during comparison.
+Each line is hashed individually using a 32-bit non-cryptographic hash
+(FNV-1a). This hash is used internally for the diff-based
+reconciliation algorithm — it is never exposed to the LLM. The hash
+serves as a compact proxy for line content during comparison.
 
 ---
 
-## 2. Data Structures
+## 2. The structures involved
 
-### 2.1 Tracked Document State
+### 2.1 Tracked document state
 
 For each file being tracked, the system maintains:
 
@@ -64,9 +86,7 @@ TrackedDocument {
 }
 ```
 
-### 2.2 Edit Specification
-
-An edit is specified by the LLM as a structure containing:
+### 2.2 An edit, as specified by the LLM
 
 ```
 Edit {
@@ -80,7 +100,7 @@ Edit {
 }
 ```
 
-### 2.3 Resolved Edit
+### 2.3 An edit, once resolved
 
 After validation, an edit is resolved to concrete line indices:
 
@@ -92,9 +112,9 @@ ResolvedEdit {
 }
 ```
 
-### 2.4 Applicable Edit Types
+### 2.4 The three edit operations
 
-| Type | Behavior |
+| Type | Behaviour |
 |---|---|
 | `replace` | Replaces the inclusive range from `anchor` to `end_anchor` with `text`. Requires both `anchor` and `end_anchor`. |
 | `insert_after` | Inserts `text` after the line identified by `anchor`. Does not remove any lines. |
@@ -102,19 +122,24 @@ ResolvedEdit {
 
 ---
 
-## 3. The Anchor Word Dictionary
+## 3. The anchor dictionary
 
-A flat text file contains approximately 1,720 English words, each on its own line. Words are drawn from common English vocabulary and are case-sensitive — they start with a capital letter followed by lowercase letters (e.g., `Popover`, `Helvetica`, `Spawner`, `Debugger`). Single-letter words and words with special characters are excluded.
+A flat text file contains approximately 1,720 English words, each on
+its own line. Words are drawn from common English vocabulary and are
+case-sensitive — they start with a capital letter followed by lowercase
+letters (e.g. `Popover`, `Helvetica`, `Spawner`, `Debugger`).
+Single-letter words and words with special characters are excluded.
 
 The dictionary is loaded once at startup and kept in memory.
 
 ---
 
-## 4. Anchor Word Generation
+## 4. Minting anchor words
 
-### 4.1 Generation Algorithm
+### 4.1 The basic recipe
 
-Anchor words are generated by selecting two random words from the dictionary and concatenating them:
+Anchor words are generated by selecting two random words from the
+dictionary and concatenating them:
 
 ```
 word1 = dictionary[random(0, dictLength - 1)]
@@ -122,44 +147,55 @@ word2 = dictionary[random(0, dictLength - 1)]
 anchor = word1 + word2   // e.g. "Popover" + "Spawner" = "PopoverSpawner"
 ```
 
-### 4.2 Uniqueness Enforcement
+### 4.2 Keeping them unique
 
-Each anchor word must be unique within a file. Before assigning an anchor, the system checks whether it has already been used (via a `usedWords` set). If it has, the word is rejected and a new combination is drawn.
+Each anchor word must be unique within a file. Before assigning an
+anchor, the system checks whether it has already been used (via a
+`usedWords` set). If it has, the word is rejected and a new combination
+is drawn.
 
-### 4.3 Pool-Based Generation
+### 4.3 The pre-generated pool
 
-To avoid the O(n) cost of generating unique words one at a time during large file reads, a **pool** of pre-generated unique words is maintained:
+To avoid the O(n) cost of generating unique words one at a time during
+large file reads, a **pool** of pre-generated unique words is kept:
 
-1. On initialization, generate ~10,000 unique two-word combinations.
+1. On initialisation, generate ~10,000 unique two-word combinations.
 2. Shuffle the pool randomly.
 3. When a new anchor is needed, pop from the pool (O(1)).
-4. When the pool runs low, refill with another batch of ~10,000 combinations.
+4. When the pool runs low, refill with another batch of ~10,000
+   combinations.
 
-### 4.4 Three-Word Fallback
+### 4.4 Three-word fallback
 
-If the two-word pool is exhausted (extremely large files with many anchors), fall back to three-word combinations:
+If the two-word pool is exhausted (extremely large files with many
+anchors), fall back to three-word combinations:
 
 ```
 anchor = word1 + word2 + word3
 ```
 
-This expands the space to ~5 billion combinations, sufficient for any file.
+This expands the space to ~5 billion combinations, sufficient for any
+file.
 
-### 4.5 Linear Number Fallback for Massive Files
+### 4.5 Plain numbers for very large files
 
-For files exceeding 50,000 lines, the system bypasses word anchors entirely and uses simple line numbers:
+For files exceeding 50,000 lines, the system bypasses word anchors
+entirely and uses simple line numbers:
 
 ```
 anchor = "L" + (lineNumber + 1)   // e.g. "L1", "L2", ..., "L50000"
 ```
 
-These numeric anchors are **not stable** — they shift with insertions and deletions. This is an acknowledged trade-off for performance on very large files.
+These numeric anchors are **not stable** — they shift with insertions
+and deletions. This is an acknowledged trade-off for performance on very
+large files.
 
 ---
 
-## 5. Line Hash Function
+## 5. The line hash: FNV-1a, 32-bit
 
-Each line is hashed using the **FNV-1a** (Fowler–Noll–Vo) 32-bit non-cryptographic hash:
+Each line is hashed using **FNV-1a** (Fowler–Noll–Vo) 32-bit
+non-cryptographic hash:
 
 ```
 function fnv1a_32(line: String) -> Uint32:
@@ -172,15 +208,20 @@ function fnv1a_32(line: String) -> Uint32:
 ```
 
 This hash is:
+
 - Very fast to compute (pure integer arithmetic, no allocations)
-- Sufficient for equality detection (hash collisions are possible but extremely rare in practice for source code lines)
-- Not cryptographically secure — this is intentional; we only need change detection, not adversarial resistance
+- Sufficient for equality detection (hash collisions are possible but
+  extremely rare in practice for source code lines)
+- Not cryptographically secure — this is intentional; we only need
+  change detection, not adversarial resistance
 
 ---
 
-## 6. Anchor Reconciliation Algorithm
+## 6. Reconciliation: keeping anchors stable
 
-This is the core of the system. It determines which anchor words to assign to each line of a file, preserving stable anchors for unchanged lines.
+This is the core of the system. It determines which anchor words to
+assign to each line of a file, preserving stable anchors for unchanged
+lines.
 
 ### 6.1 Inputs
 
@@ -188,15 +229,16 @@ This is the core of the system. It determines which anchor words to assign to ea
 - `currentLines` — array of strings, the current file content split by newlines
 - `taskId` — execution session identifier (for multi-session isolation)
 
-### 6.2 Per-Session State
+### 6.2 Bounded per-session state
 
-State is maintained per `(taskId, absolutePath)` pair. Session state is bounded:
+State is maintained per `(taskId, absolutePath)` pair. Session state is
+bounded:
 
 - Maximum 50 concurrent sessions (LRU eviction)
 - Maximum 1,024 files per session (LRU eviction)
 - Maximum 50,000 lines per file
 
-### 6.3 Algorithm
+### 6.3 The algorithm
 
 ```
 function reconcile(absolutePath, currentLines, taskId):
@@ -272,24 +314,29 @@ function reconcile(absolutePath, currentLines, taskId):
     return newAnchors
 ```
 
-### 6.4 Key Property: Anchor Stability
+### 6.4 The invariant that matters
 
-The critical invariant is established in step 6: **unchanged lines get the same word anchor**. This means:
+The critical invariant is established in step 6: **unchanged lines get
+the same word anchor**. This means:
 
-- If a line's content has not changed, it keeps its anchor even if lines above/below it are added or removed.
+- If a line's content has not changed, it keeps its anchor even if
+  lines above/below it are added or removed.
 - The anchor is tied to content identity, not position.
-- The LLM can safely reference `PopoverSpawner§def foo():` even if 100 lines were added above it.
+- The LLM can safely reference `PopoverSpawner§def foo():` even if 100
+  lines were added above it.
 
-### 6.5 LRU Eviction
+### 6.5 LRU eviction
 
 To prevent memory leaks, state uses LRU eviction:
 
-- **Session eviction**: When a new session exceeds the 50-session limit, the oldest session is evicted.
-- **File eviction**: When a new file within a session exceeds the 1,024-file limit, the oldest tracked file is evicted.
+- **Session eviction**: When a new session exceeds the 50-session
+  limit, the oldest session is evicted.
+- **File eviction**: When a new file within a session exceeds the
+  1,024-file limit, the oldest tracked file is evicted.
 
 ---
 
-## 7. Read Phase: Presenting a File to the LLM
+## 7. Reading: what the LLM is shown
 
 ### 7.1 Algorithm
 
@@ -316,15 +363,19 @@ function readFile(filePath, taskId):
     return output
 ```
 
-### 7.2 File-Level Hash Caching
+### 7.2 Why the file-level hash is sent
 
-The file-level hash is included in the output as `[File Hash: a1b2c3d4]`. On subsequent reads, if the file-level hash matches, the system skips re-sending all line content and returns a short staleness message. This saves tokens when the LLM repeatedly reads files that haven't changed.
+The file-level hash is included in the output as
+`[File Hash: a1b2c3d4]`. On subsequent reads, if the file-level hash
+matches, the system skips re-sending all line content and returns a
+short staleness message. This saves tokens when the LLM repeatedly reads
+files that haven't changed.
 
 ---
 
-## 8. Edit Phase: Applying an Edit
+## 8. Editing: from anchor to disk
 
-### 8.1 Overall Pipeline
+### 8.1 The pipeline
 
 ```
 function applyEdit(config, filePath, edits):
@@ -358,7 +409,7 @@ function applyEdit(config, filePath, edits):
     return formatResponse(appliedEdits, failedEdits, diagnostics, newLineHashes)
 ```
 
-### 8.2 Edit Resolution (Anchor → Line Index)
+### 8.2 Resolving anchors to line indices
 
 ```
 function resolveEdits(edits, lines, lineHashes):
@@ -392,7 +443,7 @@ function resolveEdits(edits, lines, lineHashes):
     return { resolvedEdits, failedEdits }
 ```
 
-### 8.3 Anchor Resolution with Content Verification
+### 8.3 Resolving one anchor, with content verification
 
 ```
 function resolveAnchor(rawAnchor, normalizedHashes, lines):
@@ -423,17 +474,20 @@ function resolveAnchor(rawAnchor, normalizedHashes, lines):
     return { index }
 ```
 
-The **content verification** (Check 4) is the most important safety mechanism. Even if the anchor word exists in the file, the system verifies that:
+The **content verification** (Check 4) is the most important safety
+mechanism. Even if the anchor word exists in the file, the system
+verifies that:
 
 - The line content the LLM provided (the text after `§`)
 - Matches what is actually in the file at that anchor position
 
 This prevents "blind" edits when:
+
 - The user modified the file between the read and the edit
 - Another tool modified the file
 - The anchor word somehow moved to a different line (hash collision)
 
-### 8.4 Applying Edits to Lines
+### 8.4 Applying edits, bottom-up
 
 ```
 function applyEditsToLines(lines, resolvedEdits):
@@ -493,30 +547,41 @@ function applyEditsToLines(lines, resolvedEdits):
     return { finalLines: newLines, appliedEdits }
 ```
 
-**Why reverse order?** If edits are applied top-to-bottom, applying an earlier edit changes the line indices for all subsequent edits. By sorting in descending order (bottom-to-top), each edit operates on the original index space because later edits are always below earlier edits in the file.
+**Why reverse order?** If edits are applied top-to-bottom, applying an
+earlier edit changes the line indices for all subsequent edits. By
+sorting in descending order (bottom-to-top), each edit operates on the
+original index space because later edits are always below earlier edits
+in the file.
 
-### 8.5 Strip Anchors from Replacement Text
+### 8.5 Stripping stray anchors from replacement text
 
-The `text` field of an edit might accidentally contain anchor-prefixed lines (e.g., if the LLM copied from the read output). The system strips any anchor prefixes matching the pattern `/^[A-Z][a-zA-Z]*§/` from each line of the replacement text before applying.
+The `text` field of an edit might accidentally contain anchor-prefixed
+lines (e.g. if the LLM copied from the read output). The system strips
+any anchor prefixes matching the pattern `/^[A-Z][a-zA-Z]*§/` from each
+line of the replacement text before applying.
 
 ---
 
-## 9. Save and Post-Edit Re-reconciliation
+## 9. After saving: re-reconciliation
 
 After applying edits to the in-memory line array and writing to disk:
 
-1. The final content is read back (which may differ due to auto-formatting by the editor or formatter tools).
+1. The final content is read back (which may differ due to
+   auto-formatting by the editor or formatter tools).
 2. `reconcile()` is called again with the new content:
    - Previously unchanged lines retain their anchors.
    - Lines that were removed have their anchors freed.
-   - Lines that were added (both edits and auto-formatting changes) get new anchors.
-   - Lines that were part of the edit but whose content didn't change retain their anchors.
+   - Lines that were added (both edits and auto-formatting changes)
+     get new anchors.
+   - Lines that were part of the edit but whose content didn't change
+     retain their anchors.
 
-This ensures that subsequent reads immediately see correct anchors for the updated file.
+This ensures that subsequent reads immediately see correct anchors for
+the updated file.
 
 ---
 
-## 10. Conflict Detection Summary
+## 10. Conflict checks at a glance
 
 | Check | When | Condition | Error |
 |---|---|---|---|
@@ -531,93 +596,131 @@ This ensures that subsequent reads immediately see correct anchors for the updat
 
 ---
 
-## 11. Response Formatting
+## 11. What the LLM gets back
 
 After applying edits, the response to the LLM includes:
 
-1. **Diff blocks** showing what changed (with `-` for removed lines and `+` for added lines).
-2. **Context lines** (2 lines before and after the edit) to help the LLM understand the change in context.
-3. **Failed edit reports** — each failed edit with an error message explaining why it failed.
-4. **New anchors** for the entire file (if more than ~70% of lines changed, the full file with new anchors is returned; otherwise, only the diff is returned).
+1. **Diff blocks** showing what changed (with `-` for removed lines
+   and `+` for added lines).
+2. **Context lines** (2 lines before and after the edit) to help the
+   LLM understand the change in context.
+3. **Failed edit reports** — each failed edit with an error message
+   explaining why it failed.
+4. **New anchors** for the entire file (if more than ~70% of lines
+   changed, the full file with new anchors is returned; otherwise, only
+   the diff is returned).
 5. **Diagnostics** — any new linter or syntax errors introduced by the edit.
 
 ---
 
-## 12. Performance Considerations
+## 12. Performance notes
 
-### 12.1 Hash Computation
+### 12.1 Hash computation
 
-FNV-1a 32-bit hash is extremely fast — a single integer multiply-XOR loop per line. For a 10,000-line file, computing all hashes takes microseconds.
+FNV-1a 32-bit hash is extremely fast — a single integer multiply-XOR
+loop per line. For a 10,000-line file, computing all hashes takes
+microseconds.
 
-### 12.2 Myers Diff
+### 12.2 Myers diff
 
-The Myers diff algorithm runs on integer arrays (the FNV-1a hashes), not on strings. This is significantly faster than diffing strings because:
+The Myers diff algorithm runs on integer arrays (the FNV-1a hashes),
+not on strings. This is significantly faster than diffing strings
+because:
+
 - Integer comparison is O(1) vs. string comparison which is O(n) per comparison.
 - The hash arrays are compact in memory (4 bytes per entry).
 
-For files under 50,000 lines, Myers diff completes in milliseconds in practice.
+For files under 50,000 lines, Myers diff completes in milliseconds in
+practice.
 
-### 12.3 Fast Path
+### 12.3 Fast path
 
-If the file hasn't changed at all (all hashes identical), the diff is skipped entirely — a simple O(n) scan confirms identity and the existing anchors are returned immediately.
+If the file hasn't changed at all (all hashes identical), the diff is
+skipped entirely — a simple O(n) scan confirms identity and the
+existing anchors are returned immediately.
 
-### 12.4 Anchor Pool Generation
+### 12.4 Anchor pool generation
 
-Generating 10,000 unique two-word combinations involves at most ~50,000 random draws (with collision retries). This is done once and amortized across all line assignments.
+Generating 10,000 unique two-word combinations involves at most ~50,000
+random draws (with collision retries). This is done once and amortised
+across all line assignments.
 
-### 12.5 Memory Bounds
+### 12.5 Memory bounds
 
 - Per file: up to 50,000 × (4 bytes hash + ~20 bytes anchor) ≈ 1.2 MB
-- Per session: up to 1,024 files × 1.2 MB ≈ 1.2 GB maximum theoretical (practically much smaller)
+- Per session: up to 1,024 files × 1.2 MB ≈ 1.2 GB maximum theoretical
+  (practically much smaller)
 - Across sessions: up to 50 sessions, with LRU eviction
 
 ---
 
-## 13. Edge Cases
+## 13. Edge cases
 
-### 13.1 File Never Seen Before
+### 13.1 File never seen before
 
 All lines get fresh random anchor words. No preservation occurs.
 
-### 13.2 File Completely Rewritten
+### 13.2 File completely rewritten
 
-Myers diff will show all old lines as removed and all new lines as added. Every line gets a new anchor. No anchors are preserved.
+Myers diff will show all old lines as removed and all new lines as
+added. Every line gets a new anchor. No anchors are preserved.
 
-### 13.3 Single Line Changed
+### 13.3 Single line changed
 
-Myers diff produces a minimal edit script: one line removed, one line added. All other lines keep their anchors.
+Myers diff produces a minimal edit script: one line removed, one line
+added. All other lines keep their anchors.
 
-### 13.4 Lines Inserted at the Top
+### 13.4 Lines inserted at the top
 
-All pre-existing lines shift down but keep their anchors. New lines at the top get new anchors. Edits referencing pre-existing lines still resolve correctly.
+All pre-existing lines shift down but keep their anchors. New lines at
+the top get new anchors. Edits referencing pre-existing lines still
+resolve correctly.
 
-### 13.5 Lines Deleted at the Top
+### 13.5 Lines deleted at the top
 
-All pre-existing lines shift up but keep their anchors. Edits referencing pre-existing lines still resolve correctly.
+All pre-existing lines shift up but keep their anchors. Edits
+referencing pre-existing lines still resolve correctly.
 
-### 13.6 Hash Collision
+### 13.6 Hash collision
 
-Two different lines producing the same FNV-1a hash is theoretically possible but extremely rare in practice for source code of typical length. If it occurs, the diff algorithm treats them as identical, and the anchor for that hash position is preserved. The **content verification** step in edit resolution provides a safety net: even if the anchor resolves to the wrong line due to a collision, the content check will reject the edit because the line content won't match.
+Two different lines producing the same FNV-1a hash is theoretically
+possible but extremely rare in practice for source code of typical
+length. If it occurs, the diff algorithm treats them as identical, and
+the anchor for that hash position is preserved. The **content
+verification** step in edit resolution provides a safety net: even if
+the anchor resolves to the wrong line due to a collision, the content
+check will reject the edit because the line content won't match.
 
-### 13.7 File Exceeds 50,000 Lines
+### 13.7 File exceeds 50,000 lines
 
-The system falls back to numeric anchors (`L1`, `L2`, ...). These are NOT stable — they shift with insertions and deletions. The LLM is expected to re-read the file before editing it.
+The system falls back to numeric anchors (`L1`, `L2`, ...). These are
+NOT stable — they shift with insertions and deletions. The LLM is
+expected to re-read the file before editing it.
 
-### 13.8 Session Expiry
+### 13.8 Session expiry
 
-When a session is evicted from LRU cache, all anchor state is lost. The next read of a file within that session treats it as a first-time read and assigns all-new anchors. Old anchors referenced by the LLM will not be found.
+When a session is evicted from LRU cache, all anchor state is lost. The
+next read of a file within that session treats it as a first-time read
+and assigns all-new anchors. Old anchors referenced by the LLM will not
+be found.
 
-### 13.9 Multiple Files in One Edit Call
+### 13.9 Multiple files in one edit call
 
-Edits for different files are grouped and processed independently. Each file goes through the full pipeline (prepare → resolve → apply → save → diagnostics) independently but concurrently.
+Edits for different files are grouped and processed independently. Each
+file goes through the full pipeline (prepare → resolve → apply → save
+→ diagnostics) independently but concurrently.
 
-### 13.10 Auto-Formatting After Save
+### 13.10 Auto-formatting after save
 
-The editor may auto-format the file after the save (e.g., running a formatter like Prettier or Black). This changes file content and triggers a full re-reconciliation. Anchors for lines that happened to be reformatted (e.g., indentation changed) will NOT be preserved — they will get new anchors because their content hash changed.
+The editor may auto-format the file after the save (e.g. running a
+formatter like Prettier or Black). This changes file content and
+triggers a full re-reconciliation. Anchors for lines that happened to
+be reformatted (e.g. indentation changed) will NOT be preserved — they
+will get new anchors because their content hash changed.
 
 ---
 
-## 14. Complete Sequence Diagram
+## 14. A full round trip
 
 ```
 LLM                         System                       Filesystem
@@ -671,27 +774,42 @@ LLM                         System                       Filesystem
 
 ---
 
-## 15. Implementation Notes for Reimplementors
+## 15. Notes for reimplementors
 
-### 15.1 Required Dependencies
+### 15.1 What you need
 
-- **Myers diff** — Any library implementing Myers' diff algorithm on arbitrary sequences (with support for detecting added, removed, and unchanged regions). The algorithm must accept two arrays and return a grouped edit script. Pure Myers is preferred over LCS-based diffs for performance.
-- **FNV-1a 32-bit** — Trivial to implement (see Section 5). A few lines of integer arithmetic.
-- **Random number generator** — For anchor word selection. Must be seeded or cryptographically secure only if collisions are to be avoided; a simple PRNG is sufficient.
+- **Myers diff** — Any library implementing Myers' diff algorithm on
+  arbitrary sequences (with support for detecting added, removed, and
+  unchanged regions). The algorithm must accept two arrays and return a
+  grouped edit script. Pure Myers is preferred over LCS-based diffs for
+  performance.
+- **FNV-1a 32-bit** — Trivial to implement (see Section 5). A few lines
+  of integer arithmetic.
+- **Random number generator** — For anchor word selection. Must be
+  seeded or cryptographically secure only if collisions are to be
+  avoided; a simple PRNG is sufficient.
 
-### 15.2 Anchor Display Format
+### 15.2 Why `§` works as a delimiter
 
 The delimiter `§` (U+00A7, section sign) was chosen because it:
+
 - Is visually distinct from ASCII source code characters
 - Is unlikely to appear naturally in source code
 - Is easily split upon
 
-Any delimiter that does not appear in source code and is easy to parse would work.
+Any delimiter that does not appear in source code and is easy to parse
+would work.
 
-### 15.3 State Persistence
+### 15.3 Keeping state on disk
 
-In the original implementation, anchor state is kept in memory only and scoped to an execution session. For a more persistent implementation, state could be serialized to disk keyed by `(sessionId, absolutePath, fileModificationTimestamp)`. If using timestamps, invalidate the cache when `mtime` changes.
+In the original implementation, anchor state is kept in memory only and
+scoped to an execution session. For a more persistent implementation,
+state could be serialised to disk keyed by
+`(sessionId, absolutePath, fileModificationTimestamp)`. If using
+timestamps, invalidate the cache when `mtime` changes.
 
-### 15.4 Thread Safety
+### 15.4 Thread safety
 
-If running in a multi-threaded context, the state store must be protected by a mutex or similar synchronization primitive. The `reconcile()` function reads and writes shared state.
+If running in a multi-threaded context, the state store must be
+protected by a mutex or similar synchronisation primitive. The
+`reconcile()` function reads and writes shared state.

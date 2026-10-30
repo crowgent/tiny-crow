@@ -113,7 +113,7 @@ test("no_matching_hook_passes_through_to_inner_tool", async () => {
 });
 
 test("post_tool_use_failure_observes_but_cannot_change_the_outcome", async () => {
-  const path = join(tmpdir(), `zerostack-hooks-decorator-failure-${process.pid}`);
+  const path = join(tmpdir(), `tiny-crow-hooks-decorator-failure-${process.pid}`);
   rmSync(path, { force: true });
   const dispatcher = dispatcherWith("PostToolUseFailure", [handler(`touch ${path}`)]);
   const wrapped = wrapAll([alwaysFailsTool()], dispatcher, permission() as never, "sess-1");

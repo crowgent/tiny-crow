@@ -98,7 +98,7 @@ export function handle(_parts: string[], ctx: SlashCtx): void {
     "  /wt-exit               exit worktree and return to main repo",
     "  /hooks                 show configured hook events and handlers",
     "  /history               show global chat history",
-    "  /quit [/exit]          exit zerostack-ts",
+    "  /quit [/exit]          exit tiny-crow",
     "  /welcome               show the quickstart guide",
     "  /tutor                 open GET_STARTED.md in less",
     "  /tutorial              alias for /welcome",

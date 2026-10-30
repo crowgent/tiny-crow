@@ -1,30 +1,36 @@
 ---
-description: "Full zerostack-ts configuration reference: config file locations, providers, permissions, hooks, MCP, themes, and every available option."
+description: "Full tiny-crow configuration reference: config file locations, providers, permissions, hooks, MCP, themes, and every available option."
 ---
 
-# Configuration
+# Configuration Reference
 
-zerostack-ts reads an optional config file. It supports TOML, YAML and JSON
-formats. The file is resolved by priority:
+Tiny Crow reads an optional config file in TOML, YAML, or JSON. Where
+it looks, in priority order:
 
-- If `ZS_CONFIG_DIR` is set: `$ZS_CONFIG_DIR/config.toml` (preferred), `config.yaml`/`config.yml`, or `config.json`
-- Otherwise: `~/.config/zerostack/config.toml` (preferred), `config.yaml`/`.yml`, or `config.json`
-- Otherwise: `~/.local/share/zerostack/config.toml` (preferred), `config.yaml`/`.yml`, or `config.json`
+- If `TC_CONFIG_DIR` is set: `$TC_CONFIG_DIR/config.toml` (preferred),
+  `config.yaml`/`config.yml`, or `config.json`
+- Otherwise: `~/.config/tiny-crow/config.toml` (preferred),
+  `config.yaml`/`.yml`, or `config.json`
+- Otherwise: `~/.local/share/tiny-crow/config.toml` (preferred),
+  `config.yaml`/`.yml`, or `config.json`
 
-If a `config.toml` exists at a higher priority, it is used. If none exists
-at any priority, a default `config.toml` is created in the lowest-priority
-directory (`~/.local/share/zerostack/`). On macOS the XDG config path above
-resolves to `~/Library/Application Support/zerostack/`.
+A `config.toml` at a higher priority wins over anything lower. If no
+config exists at any priority, a default `config.toml` is created in
+the lowest-priority directory (`~/.local/share/tiny-crow/`). On macOS
+the XDG config path above resolves to
+`~/Library/Application Support/tiny-crow/`.
 
-**Project-local override**: if `.zerostack/config.toml` exists in the
-current working directory, it is merged over the global config at startup.
-Any subset of keys may be set — tables (e.g. `mcp_servers`, `quick_models`,
-`api_keys`) merge per key, scalars and arrays replace the global value, and
-keys absent from the local file keep their global values. A startup note is
-printed whenever an override is applied.
+## Project-local overrides
+
+If `.tiny-crow/config.toml` exists in the current working directory, it
+is merged over the global config at startup. Any subset of keys may be
+set — tables (e.g. `mcp_servers`, `quick_models`, `api_keys`) merge per
+key, scalars and arrays replace the global value, and keys absent from
+the local file keep their global values. A startup note is printed
+whenever an override is applied.
 
 ```toml
-# .zerostack/config.toml
+# .tiny-crow/config.toml
 model = "anthropic/claude-sonnet-4-5"
 show_reasoning = true
 
@@ -33,42 +39,53 @@ command = "npx"
 args = ["-y", "@modelcontextprotocol/server-filesystem", "."]
 ```
 
-The local file is trusted exactly like the global config — it can enable
-`yolo`/`accept-all`, add permission rules, or spawn MCP server processes —
-so review `.zerostack/config.toml` when working in untrusted checkouts.
+The local file is trusted exactly like the global config — it can
+enable `yolo`/`accept-all`, add permission rules, or spawn MCP server
+processes — so review `.tiny-crow/config.toml` when working in
+untrusted checkouts.
 
-Prompts and themes are loaded from multiple sources, with later sources
-overriding earlier ones for same-named files:
+## Where prompts and themes come from
 
-**Prompts** (priority low to high):
+Prompts and themes are loaded from several sources, with later sources
+overriding earlier ones for same-named files.
+
+**Prompts** (lowest to highest priority):
+
 1. Built into the program
-2. `~/.local/share/zerostack/prompts/` (global, user-level)
+2. `~/.local/share/tiny-crow/prompts/` (global, user-level)
 3. `prompts/` (project-local, relative to CWD)
-4. `.zerostack/prompts/` (project-level config)
-5. `--prompts-dir <path>` / `ZS_PROMPTS_DIR` (CLI, highest priority; repeatable, last wins)
+4. `.tiny-crow/prompts/` (project-level config)
+5. `--prompts-dir <path>` / `TC_PROMPTS_DIR` (CLI, highest priority;
+   repeatable, last wins)
 
-Extra CLI prompts dirs load `.md` files like the other tiers: same-named
-prompts override everything below, new names are added. Missing dirs are
-skipped with a warning. `ZS_PROMPTS_DIR` (`:`-separated, e.g.
-`ZS_PROMPTS_DIR=./shared:./team`) appends after the `--prompts-dir` flags,
-so the env's last entry wins overall.
+Extra CLI prompts dirs load `.md` files like the other tiers:
+same-named prompts override everything below, new names are added.
+Missing dirs are skipped with a warning. `TC_PROMPTS_DIR`
+(`:`-separated, e.g. `TC_PROMPTS_DIR=./shared:./team`) appends after the
+`--prompts-dir` flags, so the env's last entry wins overall.
 
-**Themes** (priority low to high):
+**Themes** (lowest to highest priority):
+
 1. Built into the program
-2. `~/.local/share/zerostack/themes/` (global, user-level)
+2. `~/.local/share/tiny-crow/themes/` (global, user-level)
 3. `themes/` (project-local, relative to CWD)
 
-If `ZS_CONFIG_DIR` is set, it overrides the data directory for the config file
-location only (prompts and themes still use `ZS_DATA_DIR` / the default data
-dir). Set `ZS_CONFIG_DIR` when you want the config in a separate path from the
-data files.
+If `TC_CONFIG_DIR` is set, it overrides the data directory for the
+config file location only (prompts and themes still use `TC_DATA_DIR` /
+the default data dir). Set `TC_CONFIG_DIR` when you want the config in
+a separate path from the data files.
 
-All config keys are optional. CLI flags and their environment-backed values
-(such as `ZS_PROVIDER` and `ZS_MODEL`) take precedence where both exist.
-Unknown top-level keys (typos, or keys gated behind an optional subsystem that is
-not included) produce a warning at startup — they are otherwise ignored.
+## Precedence, and unknown keys
 
-Example (YAML):
+All config keys are optional. CLI flags and their environment-backed
+values (such as `TC_PROVIDER` and `TC_MODEL`) take precedence where both
+exist. Unknown top-level keys (typos, or keys gated behind an optional
+subsystem that is not included) produce a warning at startup — they are
+otherwise ignored.
+
+## A worked example
+
+In YAML:
 
 ```yaml
 provider: openrouter
@@ -104,7 +121,7 @@ custom_providers:
     api_style: completions
     headers:
       cf-access-client-id: "${CF_ACCESS_CLIENT_ID}"
-      cf-access-client-secret: "${CF_ACCESS_CLIENT_SECRET}"
+cf-access-client-secret: <redacted>
     danger_accept_invalid_certs: false
     timeout_secs: 60
 permission:
@@ -126,7 +143,7 @@ The same config in TOML:
 
 ```toml
 provider = "openrouter"
-model = "deepseek-v4-flash"
+model = "deepseek/deepseek-v4-flash"
 max_tokens = 16384
 temperature = 0.7
 context_window = 128000
@@ -168,7 +185,7 @@ read = "allow"
 permission.doom_loop = "ask"
 ```
 
-Accepted top-level keys:
+## Top-level keys
 
 | Key                       | Type    | Description                                                                                                                                                                 |
 | ------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -196,7 +213,7 @@ Accepted top-level keys:
 | `permission`              | object  | Permission rules using glob patterns; see the permission config notes below.                                |
 | `permission-regex`        | object  | Same structure as `permission` but patterns are interpreted as regex instead of glob.                       |
 | `permission-allow`        | object  | Map of tool names to lists of glob patterns to allow. Works alongside the `permission` field. See below.    |
-| `permission-ask`          | object  | Map of tool names to lists of glob patterns to prompt on. Works alongside the `permission` field. See below.|
+| `permission-ask`          | object  | Map of tool names to lists of glob patterns to prompt on. Works alongside the `permission` field. See below. |
 | `permission-deny`         | object  | Map of tool names to lists of glob patterns to deny. Works alongside the `permission` field. See below.     |
 | `restrictive`             | boolean | Select restrictive permission mode (ask for every operation). Overridden by `accept_all`/`yolo` if those are also true.                                                     |
 | `accept_all`              | boolean | Select standard permission mode with auto-allow within CWD (equivalent to `default_permission_mode = "standard"`). Overridden by `yolo` if true.                            |
@@ -212,12 +229,12 @@ Accepted top-level keys:
 | `show_reasoning`          | boolean | Show streamed reasoning text in the TUI. Can still be toggled at runtime with `Ctrl+R` or `/reasoning`. Default: `false`. |
 | `statusline`              | table   | Configurable status bar (up to 3 lines of colored segments). When absent, a built-in default layout is used. See Status bar below. |
 | `chat_left_margin`        | integer | Left padding (columns) for the chat area only; input and status rows are unaffected. Default: `0`. |
-| `mouse_capture`           | boolean | When `true` (default), the TUI captures mouse events so zerostack-ts can handle scrolling, click-to-place-cursor, and drag-to-select/copy. When `false`, mouse selection/copy/paste is handled by your terminal emulator instead, but in-app mouse features — including mouse-wheel scrolling — are disabled. Use `PgUp`/`PgDn`, `Ctrl+Up`/`Ctrl+Down`, or `Home`/`End` to scroll when mouse capture is off. |
+| `mouse_capture`           | boolean | When `true` (default), the TUI captures mouse events so tiny-crow can handle scrolling, click-to-place-cursor, and drag-to-select/copy. When `false`, mouse selection/copy/paste is handled by your terminal emulator instead, but in-app mouse features — including mouse-wheel scrolling — are disabled. Use `PgUp`/`PgDn`, `Ctrl+Up`/`Ctrl+Down`, or `Home`/`End` to scroll when mouse capture is off. |
 | `default_prompt`          | string  | Prompt name to activate on startup. Default: `code`. If the prompt file has a `%%mode=<mode>` first-line directive, the security mode is set automatically (see Prompt directives below). |
 | `editor`                  | string  | Editor command for `Ctrl+G` (default: `$EDITOR` env var, then `editor`, then `nano`).                                                                                        |
 | `api_keys`                | object  | Map of provider names to API keys (e.g. `"openai": "sk-..."`). Used as fallback when the corresponding env var is not set.                                                   |
 | `quick_models`            | object  | Map of quick-model names to `{ "provider", "model", "reserve_tokens"?, "input_token_cost"?, "output_token_cost"?, "temperature"?, "extra_body"? }`. Can be switched with `/models <name>` or `--quick-model=<name>`. See Provider-specific request body parameters below for `extra_body`. |
-| `prompt_to_model`         | object  | Map of prompt names to quick-model names (e.g. `plan = "glm-52"`). When switching to a prompt, zerostack-ts automatically switches to the corresponding quick model. Empty-string values are treated as "no change". See Prompt-to-model switching below. |
+| `prompt_to_model`         | object  | Map of prompt names to quick-model names (e.g. `plan = "glm-52"`). When switching to a prompt, tiny-crow automatically switches to the corresponding quick model. Empty-string values are treated as "no change". See Prompt-to-model switching below. |
 | `mcp_servers`             | object  | MCP server map when MCP support is enabled. When omitted, recommended MCPs are auto-configured (see below).                                                   |
 | `enable-exa-mcp`          | boolean | Auto-configure the Exa Web Search MCP server. Default: `true`.                                                                                                         |
 | `enable-context7-mcp`     | boolean | Auto-configure the Context7 MCP server. Default: `false`.                                                                                                              |
@@ -230,10 +247,10 @@ Accepted top-level keys:
 
 ## Sandbox credential masking
 
-On the `bwrap` backend, nine well-known credential directories are masked with
-a tmpfs by default, so sandboxed bash commands see each one as empty rather
-than reading your keys and tokens (only entries that exist on the host are
-masked):
+On the `bwrap` backend, nine well-known credential directories are
+masked with a tmpfs by default, so sandboxed bash commands see each one
+as empty rather than reading your keys and tokens (only entries that
+exist on the host are masked):
 
 | Directory | Why it is masked |
 | --- | --- |
@@ -247,42 +264,45 @@ masked):
 | `~/.config/op` | 1Password CLI session state |
 | `~/.config/sops/age` | sops/age decryption keys |
 
-The last four are relative to the XDG config base: when `$XDG_CONFIG_HOME` is
-set to an absolute path, they are `$XDG_CONFIG_HOME/gh`, `.../gcloud`,
-`.../op` and `.../sops/age` instead, since that is where those tools read
-their credentials.
+The last four are relative to the XDG config base: when
+`$XDG_CONFIG_HOME` is set to an absolute path, they are
+`$XDG_CONFIG_HOME/gh`, `.../gcloud`, `.../op` and `.../sops/age`
+instead, since that is where those tools read their credentials.
 
-The tmpfs is a normal writable filesystem, not a read-only view: a command
-that writes into a masked directory (`ssh-keygen -f ~/.ssh/id_x`,
-`gh auth login`, `aws configure`) succeeds and exits `0`, then loses whatever
-it wrote when the sandbox exits. A read-only mask is possible (bwrap supports
-`--remount-ro`), but it is not the default, since it would make those same
-tools fail hard instead of silently losing their output.
+The tmpfs is a normal writable filesystem, not a read-only view: a
+command that writes into a masked directory (`ssh-keygen -f ~/.ssh/id_x`,
+`gh auth login`, `aws configure`) succeeds and exits `0`, then loses
+whatever it wrote when the sandbox exits. A read-only mask is possible
+(bwrap supports `--remount-ro`), but it is not the default, since it
+would make those same tools fail hard instead of silently losing their
+output.
 
-Use `sandbox-expose` (config key, string array, `~` and `$HOME` expansion) or
-the repeatable `--sandbox-expose <path>` CLI flag to restore read-only access
-to a masked entry or a subpath of one (for example `~/.ssh/known_hosts` without
-the private keys). When `--sandbox-expose` is passed at least once on the
-command line, it replaces the config list wholesale, following the usual
-CLI-over-config convention; otherwise the config list is used. A value is valid
-only when, after expansion, it equals one of the entries above or is a subpath
-of one, and contains no `..` component (`~/.ssh/..` names the whole home
-directory, not a masked entry); anything else is warned about once at startup,
-quoting the value, and ignored. Because the restore is a read-only bind on top of the mask,
-`sandbox-expose` can never grant write access. Like any other config key,
-`sandbox-expose` can be set from a project-local `.zerostack/config.toml`,
-trusted exactly like the global config, so review it in untrusted checkouts
-as noted above (see Project-local override). Masking, the ssh-agent cutoff,
-and `sandbox-expose` all apply to the `bwrap` backend only; see `SECURITY.md`
-for the full gap list, including what remains readable and the ssh-agent
-recovery paths.
+Use `sandbox-expose` (config key, string array, `~` and `$HOME`
+expansion) or the repeatable `--sandbox-expose <path>` CLI flag to
+restore read-only access to a masked entry or a subpath of one (for
+example `~/.ssh/known_hosts` without the private keys). When
+`--sandbox-expose` is passed at least once on the command line, it
+replaces the config list wholesale, following the usual CLI-over-config
+convention; otherwise the config list is used. A value is valid only
+when, after expansion, it equals one of the entries above or is a
+subpath of one, and contains no `..` component (`~/.ssh/..` names the
+whole home directory, not a masked entry); anything else is warned
+about once at startup, quoting the value, and ignored. Because the
+restore is a read-only bind on top of the mask, `sandbox-expose` can
+never grant write access. Like any other config key, `sandbox-expose`
+can be set from a project-local `.tiny-crow/config.toml`, trusted
+exactly like the global config, so review it in untrusted checkouts as
+noted above (see Project-local overrides). Masking, the ssh-agent
+cutoff, and `sandbox-expose` all apply to the `bwrap` backend only; see
+`SECURITY.md` for the full gap list, including what remains readable
+and the ssh-agent recovery paths.
 
 ## Sandbox network isolation
 
-On the `bwrap` backend, sandboxed bash commands share the host network by
-default, which is the historical behavior. Set `sandbox-network = false` (or
-pass `--sandbox-network=false`) to run them in their own network namespace
-instead:
+On the `bwrap` backend, sandboxed bash commands share the host network
+by default, which is the historical behaviour. Set
+`sandbox-network = false` (or pass `--sandbox-network=false`) to run
+them in their own network namespace instead:
 
 ```toml
 sandbox = true
@@ -291,74 +311,81 @@ sandbox-network = false
 
 ### What "no network" means here
 
-Each bash call gets a fresh network namespace containing nothing but its own
-private loopback device, which bubblewrap brings up for it. Two consequences,
-and they pull in opposite directions:
+Each bash call gets a fresh network namespace containing nothing but
+its own private loopback device, which bubblewrap brings up for it. Two
+consequences, and they pull in opposite directions:
 
-- **Loopback inside one command still works.** A command that starts a server
-  and then talks to it on `127.0.0.1` is fine, because both ends live in the
-  same namespace. `npm test`, `pytest`, and anything else that binds a local
-  port inside a single command keep working.
-- **The host is gone, including the host's loopback.** No internet, no LAN,
-  and no reaching a service that is already listening on your machine: a dev
-  server on `localhost:3000`, a database on `localhost:5432`, or a local
-  package registry are all invisible from inside the sandbox, because they
-  live on the host's loopback and the sandbox has its own.
+- **Loopback inside one command still works.** A command that starts a
+  server and then talks to it on `127.0.0.1` is fine, because both ends
+  live in the same namespace. `npm test`, `pytest`, and anything else
+  that binds a local port inside a single command keep working.
+- **The host is gone, including the host's loopback.** No internet, no
+  LAN, and no reaching a service that is already listening on your
+  machine: a dev server on `localhost:3000`, a database on
+  `localhost:5432`, or a local package registry are all invisible from
+  inside the sandbox, because they live on the host's loopback and the
+  sandbox has its own.
 
-The namespace lasts exactly as long as the command. A server backgrounded by
-one bash call is unreachable from the next one, which also takes away the
-"start it in one step, curl it in the next" pattern.
+The namespace lasts exactly as long as the command. A server
+backgrounded by one bash call is unreachable from the next one, which
+also takes away the "start it in one step, curl it in the next" pattern.
 
-Those last two points are why the default is `true`: turning the network off
-breaks host dev servers, private registries, and any workflow split across
-several bash calls, and that is too much to change under people silently.
+Those last two points are why the default is `true`: turning the
+network off breaks host dev servers, private registries, and any
+workflow split across several bash calls, and that is too much to change
+under people silently.
 
-The CLI flag takes an optional value (bare `--sandbox-network` for `true`, or
-`--sandbox-network=false`) rather than being a plain on/off switch, because the
-key defaults to `true` and a plain switch could not express turning the
-network back on for a single run over a config that turns it off.
+The CLI flag takes an optional value (bare `--sandbox-network` for
+`true`, or `--sandbox-network=false`) rather than being a plain on/off
+switch, because the key defaults to `true` and a plain switch could not
+express turning the network back on for a single run over a config that
+turns it off.
 
-`sandbox-network` is a modifier, not an enforcer. Unlike `sandbox-required`, it
-never switches the sandbox on: with `sandbox = false` there is nothing to cut
-the network from, so the setting has no effect and a warning is logged once at
-startup. Pairing it with `sandbox-required` is what turns the no-network
-promise into a guarantee, since a missing backend otherwise falls back to
-running commands bare, with the network intact.
+`sandbox-network` is a modifier, not an enforcer. Unlike
+`sandbox-required`, it never switches the sandbox on: with
+`sandbox = false` there is nothing to cut the network from, so the
+setting has no effect and a warning is logged once at startup. Pairing
+it with `sandbox-required` is what turns the no-network promise into a
+guarantee, since a missing backend otherwise falls back to running
+commands bare, with the network intact.
 
 Like `sandbox-expose`, this key can be set from a project-local
-`.zerostack/config.toml`, which is trusted exactly like the global config. A
-checkout can therefore set `sandbox-network = true` and undo a global
-`false`, so review that file in untrusted checkouts (see Project-local
-override). Passing `--sandbox-network=false` on the command line settles the
-question for that run, since the CLI wins over both config files.
+`.tiny-crow/config.toml`, which is trusted exactly like the global
+config. A checkout can therefore set `sandbox-network = true` and undo
+a global `false`, so review that file in untrusted checkouts (see
+Project-local overrides). Passing `--sandbox-network=false` on the
+command line settles the question for that run, since the CLI wins over
+both config files.
 
-When the network is off and a command fails with a resolver or unreachable
-network error, the tool result gets one extra line telling the model the
-sandbox cut the network and to ask you whether it should be enabled, so it
-stops retrying the command instead. The hint reads stderr, so a command that
-folds stderr into stdout with `2>&1` simply does not get one. On
-systemd-resolved hosts, `/etc/resolv.conf` points at `127.0.0.53`, which
-inside the fresh namespace is the sandbox's own loopback with nothing
-listening, so DNS failures there surface as connection refused rather than
-network unreachable, which is one reason "connection refused" is in the hint
-pattern list.
+When the network is off and a command fails with a resolver or
+unreachable network error, the tool result gets one extra line telling
+the model the sandbox cut the network and to ask you whether it should
+be enabled, so it stops retrying the command instead. The hint reads
+stderr, so a command that folds stderr into stdout with `2>&1` simply
+does not get one. On systemd-resolved hosts, `/etc/resolv.conf` points
+at `127.0.0.53`, which inside the fresh namespace is the sandbox's own
+loopback with nothing listening, so DNS failures there surface as
+connection refused rather than network unreachable, which is one reason
+"connection refused" is in the hint pattern list.
 
-Like masking and `sandbox-expose`, this applies to the `bwrap` backend only.
-The `zerobox` backend denies network access under its own policy regardless of
-this key; see `SECURITY.md`.
+Like masking and `sandbox-expose`, this applies to the `bwrap` backend
+only. The `zerobox` backend denies network access under its own policy
+regardless of this key; see `SECURITY.md`.
 
-## System Prompt Suffix (`SUFFIX.md`)
+## System prompt suffix (`SUFFIX.md`)
 
 You can append custom text to **every** system prompt by creating a
-`SUFFIX.md` file in the config directory (same location as `config.toml`):
+`SUFFIX.md` file in the config directory (same location as
+`config.toml`):
 
-- Linux: `~/.config/zerostack/SUFFIX.md` (or `$ZS_CONFIG_DIR/SUFFIX.md`)
-- macOS: `~/Library/Application Support/zerostack/SUFFIX.md`
+- Linux: `~/.config/tiny-crow/SUFFIX.md` (or `$TC_CONFIG_DIR/SUFFIX.md`)
+- macOS: `~/Library/Application Support/tiny-crow/SUFFIX.md`
 
-If the file exists and contains non-whitespace content, its contents are
-appended at the very end of the system prompt preamble — **after** AGENTS.md,
-ARCHITECTURE.md, the active prompt, working directory, `/add`ed files,
-memory, and everything else. A `---` separator is inserted automatically.
+If the file exists and contains non-whitespace content, its contents
+are appended at the very end of the system prompt preamble — **after**
+AGENTS.md, ARCHITECTURE.md, the active prompt, working directory,
+`/add`ed files, memory, and everything else. A `---` separator is
+inserted automatically.
 
 The suffix applies to **all** agent contexts:
 
@@ -370,47 +397,49 @@ The suffix applies to **all** agent contexts:
 
 If the file is missing, empty, or whitespace-only, nothing is appended.
 
-Use cases: inject persistent rules, style preferences, team-wide policies,
-or provider-specific output formatting that should always be present
-regardless of which prompt or mode is active.
+Use cases: inject persistent rules, style preferences, team-wide
+policies, or provider-specific output formatting that should always be
+present regardless of which prompt or mode is active.
 
 ## Hooks
 
-Hooks are available in this build and active unless disabled with `--no-hooks`.
-The flags, files, and `/hooks`/`--hooks-test` commands below all apply.
+Hooks are available in this build and active unless disabled with
+`--no-hooks`. The flags, files, and `/hooks`/`--hooks-test` commands
+below all apply.
 
-Hooks let external commands observe or gate agent behavior at defined points
-(a tool call, a user prompt, the agent finishing a turn, a session
-starting/ending, a subagent starting/stopping), using the same
-`settings.json` shape, stdin envelope, and exit-code/stdout-JSON contract as
-Claude Code, so an existing CC hooks setup is largely compatible (see the
-`$CLAUDE_PROJECT_DIR` caveat below for the one script-level change some
-setups need).
+Hooks let external commands observe or gate agent behaviour at defined
+points (a tool call, a user prompt, the agent finishing a turn, a
+session starting/ending, a subagent starting/stopping), using the same
+`settings.json` shape, stdin envelope, and exit-code/stdout-JSON
+contract as Claude Code, so an existing CC hooks setup is largely
+compatible (see the `$TINY_CROW_PROJECT_DIR` caveat below for the one
+script-level change some setups need).
 
-### Config file locations and precedence
+### Where hook config lives, and which files are trusted
 
-Hook config lives in a `settings.json` (JSON, not `config.toml`/`.yaml`) at up
-to three locations, loaded and merged in this order:
+Hook config lives in a `settings.json` (JSON, not `config.toml`/`.yaml`)
+at up to three locations, loaded and merged in this order:
 
 | Location | Trust |
 | -------- | ----- |
-| `~/.config/zerostack/settings.json` (global; on macOS `~/Library/Application Support/zerostack/settings.json`; on Windows `%APPDATA%\zerostack\settings.json`, experimental) | Trusted by default |
-| `.zerostack/settings.json` (project, relative to CWD) | **Not** trusted by default — see Trust model below |
-| `/etc/zerostack/managed-settings.json` (Linux) / `/Library/Application Support/zerostack/managed-settings.json` (macOS) / `C:\ProgramData\zerostack\managed-settings.json` (Windows, experimental) — admin-controlled | Always trusted; unaffected by `disableAllHooks` |
+| `~/.config/tiny-crow/settings.json` (global; on macOS `~/Library/Application Support/tiny-crow/settings.json`; on Windows `%APPDATA%\tiny-crow\settings.json`, experimental) | Trusted by default |
+| `.tiny-crow/settings.json` (project, relative to CWD) | **Not** trusted by default — see Trust model below |
+| `/etc/tiny-crow/managed-settings.json` (Linux) / `/Library/Application Support/tiny-crow/managed-settings.json` (macOS) / `C:\ProgramData\tiny-crow\managed-settings.json` (Windows, experimental) — admin-controlled | Always trusted; unaffected by `disableAllHooks` |
 
-Each file may have a top-level `hooks` object (keyed by event name) and a
-top-level `disableAllHooks: true` boolean. `disableAllHooks` (from the global
-or project file) or the `--no-hooks` CLI flag suppresses every non-managed
-hook; managed hooks still run regardless. A missing or invalid file is not an
-error — it just contributes nothing.
+Each file may have a top-level `hooks` object (keyed by event name)
+and a top-level `disableAllHooks: true` boolean. `disableAllHooks`
+(from the global or project file) or the `--no-hooks` CLI flag
+suppresses every non-managed hook; managed hooks still run regardless.
+A missing or invalid file is not an error — it just contributes
+nothing.
 
-**Compatible with Claude Code's `.claude/settings.json`**: zerostack-ts does not
-read that file directly, but its own `settings.json` uses the identical
-`hooks` schema, so copying or symlinking the `hooks` key from
-`.claude/settings.json` into `.zerostack/settings.json` works as-is. Scripts
-themselves may still need a change: zerostack-ts sets `$ZEROSTACK_PROJECT_DIR`
-rather than `$CLAUDE_PROJECT_DIR`, so a script that reads the latter must be
-updated to read the former.
+**Compatible with Claude Code's `.claude/settings.json`**: tiny-crow
+does not read that file directly, but its own `settings.json` uses the
+identical `hooks` schema, so copying or symlinking the `hooks` key from
+`.claude/settings.json` into `.tiny-crow/settings.json` works as-is.
+Scripts themselves may still need a change: tiny-crow sets
+`$TINY_CROW_PROJECT_DIR` rather than `$CLAUDE_PROJECT_DIR`, so a script
+that reads the latter must be updated to read the former.
 
 ### Handler schema
 
@@ -432,7 +461,7 @@ updated to read the former.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `type` | string | Only `"command"` is supported. |
-| `command` | string | Shell command, run via `sh -c` on Unix (`powershell -Command` on Windows, experimental). Receives the stdin envelope as JSON; `$ZEROSTACK_PROJECT_DIR` is set in its environment. |
+| `command` | string | Shell command, run via `sh -c` on Unix (`powershell -Command` on Windows, experimental). Receives the stdin envelope as JSON; `$TINY_CROW_PROJECT_DIR` is set in its environment. |
 | `args` | array of strings | When present, bypasses the shell entirely: `command` is executed directly as the program with `args` as its argv (no shell metacharacter expansion). |
 | `timeout` | integer (seconds) | Per-hook timeout; the whole process group is killed on expiry. Default: 60. |
 | `async` | boolean | When `true`, the hook runs in the background and its decision is ignored. Default: `false`. |
@@ -441,10 +470,10 @@ updated to read the former.
 
 `matcher` (on the handler group, not the handler) follows Claude Code
 semantics: omitted, `""`, or `"*"` matches every tool; a bare name or a
-`|`/`,`-separated list is an exact case-insensitive match after tool-name
-normalization (e.g. `Bash` ↔ `bash`, `Glob` ↔ `find_files`, `Edit|Write`
-matches zerostack-ts's `write` tool); anything else is treated as a regex.
-Invalid regexes are reported at load time.
+`|`/`,`-separated list is an exact case-insensitive match after
+tool-name normalisation (e.g. `Bash` ↔ `bash`, `Glob` ↔ `find_files`,
+`Edit|Write` matches tiny-crow's `write` tool); anything else is treated
+as a regex. Invalid regexes are reported at load time.
 
 ### Events
 
@@ -452,39 +481,42 @@ Invalid regexes are reported at load time.
 `Stop`, `SessionStart`, `SessionEnd`, `SubagentStart`, `SubagentStop`.
 `PreCompact` and `Notification` are not currently implemented.
 
-Only `PreToolUse` is permission-blockable by default. A handler's stdout JSON
-may set `"permissionDecision"` to `"deny"`, `"ask"`, `"allow"`, or omit it
-(defer to the normal permission system). `deny` always blocks, holding even
-under `--yolo`. `ask` forces an interactive confirmation regardless of
-permission mode, and escalates to deny in non-interactive contexts (`-p`,
-`--loop`) where no confirmation is possible. `allow` suppresses the
-interactive prompt for that one call only — it can never override a deny
-from a rule, security mode, managed policy, or another hook. `PreToolUse` may
-also set `"updatedInput"` to rewrite the tool's arguments before it runs, and
-`PostToolUse` may set `"result"` to rewrite the model-visible output.
+Only `PreToolUse` is permission-blockable by default. A handler's stdout
+JSON may set `"permissionDecision"` to `"deny"`, `"ask"`, `"allow"`, or
+omit it (defer to the normal permission system). `deny` always blocks,
+holding even under `--yolo`. `ask` forces an interactive confirmation
+regardless of permission mode, and escalates to deny in non-interactive
+contexts (`-p`, `--loop`) where no confirmation is possible. `allow`
+suppresses the interactive prompt for that one call only — it can never
+override a deny from a rule, security mode, managed policy, or another
+hook. `PreToolUse` may also set `"updatedInput"` to rewrite the tool's
+arguments before it runs, and `PostToolUse` may set `"result"` to
+rewrite the model-visible output.
 
 `UserPromptSubmit` and `SubagentStart` can set `"additionalContext"` to
 prepend text to the prompt. `Stop` and `SubagentStop` can set
-`"decision": "block"` with a `"reason"` to force the agent (or subagent) to
-continue instead of finishing, using `reason` as the next instruction; `Stop`
-gives up after 8 consecutive blocks without progress.
+`"decision": "block"` with a `"reason"` to force the agent (or subagent)
+to continue instead of finishing, using `reason` as the next
+instruction; `Stop` gives up after 8 consecutive blocks without
+progress.
 
-Any handler can also signal via **exit code** instead of JSON: exit `0` means
-no objection, exit `2` blocks (for blockable events) with stderr as the
-reason, and any other exit code is a non-blocking error. Exit `2` combined
-with stdout JSON is a mixed-channel warning — the JSON is ignored.
+Any handler can also signal via **exit code** instead of JSON: exit `0`
+means no objection, exit `2` blocks (for blockable events) with stderr
+as the reason, and any other exit code is a non-blocking error. Exit `2`
+combined with stdout JSON is a mixed-channel warning — the JSON is
+ignored.
 
 ### Trust model
 
-Project-level hook handlers (`.zerostack/settings.json` — global and managed
-hooks are trusted automatically) require interactive confirmation the first
-time they'd run, keyed by a hash of the handler's definition (event +
-matcher + command/args/timeout/etc.); changing the definition changes the
-hash and requires re-confirmation. Confirmations persist to
-`$XDG_DATA_HOME/zerostack/trusted-hooks.json` (a user-level file, so child
-processes/orchestrated subagents sharing it inherit trust automatically). In
-headless contexts (`-p`, `--loop`) an unconfirmed project hook is skipped
-with a warning rather than prompting.
+Project-level hook handlers (`.tiny-crow/settings.json` — global and
+managed hooks are trusted automatically) require interactive
+confirmation the first time they'd run, keyed by a hash of the handler's
+definition (event + matcher + command/args/timeout/etc.); changing the
+definition changes the hash and requires re-confirmation. Confirmations
+persist to `$XDG_DATA_HOME/tiny-crow/trusted-hooks.json` (a user-level
+file, so child processes/orchestrated subagents sharing it inherit trust
+automatically). In headless contexts (`-p`, `--loop`) an unconfirmed
+project hook is skipped with a warning rather than prompting.
 
 ### Global switches
 
@@ -498,55 +530,61 @@ See [COMMANDS.md](COMMANDS.md#hooks) for the `/hooks` slash command.
 
 ## Mid-turn compaction
 
-By default zerostack-ts only compacts the conversation *between* turns, after a
-response finishes, when the accumulated session history exceeds
-`context_window - reserve_tokens`. A single long turn (many tool calls and large
-tool results) can still blow past the model's real context limit before that
-check ever runs, because the in-flight tool traffic never enters the session's
-token estimate.
+By default tiny-crow only compacts the conversation *between* turns,
+after a response finishes, when the accumulated session history exceeds
+`context_window - reserve_tokens`. A single long turn (many tool calls
+and large tool results) can still blow past the model's real context
+limit before that check ever runs, because the in-flight tool traffic
+never enters the session's token estimate.
 
-`mid_turn_compact_threshold` opts in to a second, *within-turn* check. On every
-provider call zerostack-ts compares the real provider-reported prompt size against
-`context_window`; when the ratio crosses the threshold it stops the run at a
-clean boundary, compacts, and resumes the same task on the compacted history.
+`mid_turn_compact_threshold` opts in to a second, *within-turn* check.
+On every provider call tiny-crow compares the real provider-reported
+prompt size against `context_window`; when the ratio crosses the
+threshold it stops the run at a clean boundary, compacts, and resumes
+the same task on the compacted history.
 
-- **Unset by default.** With no value set, behavior is unchanged: no mid-turn
-  compaction. Setting a value is the opt-in.
-- **Gated by `compact_enabled`.** `compact_enabled` is the master switch. If it
-  is `false`, `mid_turn_compact_threshold` is ignored and nothing compacts.
-- **Range.** A fraction in `(0.0, 1.0]`. An out-of-range value is ignored
-  (mid-turn compaction stays off) and zerostack-ts prints a warning at startup
-  explaining the correct form, rather than failing silently. `0.80` is a
-  reasonable starting value; it leaves headroom below the
-  context window while still keeping the live prompt small enough to avoid the
-  attention degradation ("context rot") that large, full context windows suffer.
+- **Unset by default.** With no value set, behaviour is unchanged: no
+  mid-turn compaction. Setting a value is the opt-in.
+- **Gated by `compact_enabled`.** `compact_enabled` is the master
+  switch. If it is `false`, `mid_turn_compact_threshold` is ignored and
+  nothing compacts.
+- **Range.** A fraction in `(0.0, 1.0]`. An out-of-range value is
+  ignored (mid-turn compaction stays off) and tiny-crow prints a warning
+  at startup explaining the correct form, rather than failing silently.
+  `0.80` is a reasonable starting value; it leaves headroom below the
+  context window while still keeping the live prompt small enough to
+  avoid the attention degradation ("context rot") that large, full
+  context windows suffer.
 
 ```toml
-compact_enabled = true            # master switch (default true)
+compact_enabled = true            # master switch
 context_window = 24576
 mid_turn_compact_threshold = 0.80 # compact mid-turn at 80% real prompt pressure
 ```
 
 ## OpenAI API styles and custom headers
 
-The `openai` provider (and any custom provider with `"provider_type": "openai"`)
-can talk to either of the provider client's two OpenAI transports:
+The `openai` provider (and any custom provider with
+`"provider_type": "openai"`) can talk to either of the provider client's
+two OpenAI transports:
 
 - **`responses`** — the Responses API (`/responses`). Default for
-  `api.openai.com` (no `base_url`). Required for GPT-5-series models, which
-  reject `max_tokens` on Chat Completions and expect `max_completion_tokens`.
-- **`completions`** — the Chat Completions API (`/chat/completions`). Default
-  when a custom `base_url` is set, because most OpenAI-compatible gateways
-  (vLLM, LiteLLM, self-hosted) implement only this endpoint.
+  `api.openai.com` (no `base_url`). Required for GPT-5-series models,
+  which reject `max_tokens` on Chat Completions and expect
+  `max_completion_tokens`.
+- **`completions`** — the Chat Completions API (`/chat/completions`).
+  Default when a custom `base_url` is set, because most
+  OpenAI-compatible gateways (vLLM, LiteLLM, self-hosted) implement only
+  this endpoint.
 
-Set `api_style` to override the auto-detected default — for example, to force
-`completions` against a gateway, or `responses` against an endpoint that
-actually implements `/responses`.
+Set `api_style` to override the auto-detected default — for example, to
+force `completions` against a gateway, or `responses` against an
+endpoint that actually implements `/responses`.
 
-Custom providers may also send arbitrary HTTP headers, which is useful for
-gateways behind an auth proxy such as Cloudflare Access. Header values support
-`${ENV_VAR}` expansion, so secrets stay in the environment rather than in the
-config file:
+Custom providers may also send arbitrary HTTP headers, which is useful
+for gateways behind an auth proxy such as Cloudflare Access. Header
+values support `${ENV_VAR}` expansion, so secrets stay in the
+environment rather than in the config file:
 
 ```json
 {
@@ -564,22 +602,24 @@ config file:
 }
 ```
 
-The optional `timeout_secs` field is a whole-request deadline in seconds, and
-it covers the streamed reply: a completion still running when it elapses is
-cut off. Leave it unset unless a gateway needs one. By default completion
-requests have no deadline beyond a 5s connect cap and fail only after 300s
-without a byte, while the `GET /models` requests zerostack-ts issues itself (at
-startup and from `/provider`) are capped at 8s per attempt. Like `headers`,
-this applies to `provider_type: openai`; other provider types take the provider client's
+The optional `timeout_secs` field is a whole-request deadline in
+seconds, and it covers the streamed reply: a completion still running
+when it elapses is cut off. Leave it unset unless a gateway needs one.
+By default completion requests have no deadline beyond a 5s connect cap
+and fail only after 300s without a byte, while the `GET /models`
+requests tiny-crow issues itself (at startup and from `/provider`) are
+capped at 8s per attempt. Like `headers`, this applies to
+`provider_type: openai`; other provider types take the provider client's
 default. TLS certificate verification can be disabled with
 `"danger_accept_invalid_certs": true` (for self-signed or internal-CA
-gateways) — use with care, as it makes the connection vulnerable to MITM.
+gateways) — use with care, as it makes the connection vulnerable to
+MITM.
 
 ## Provider-specific request body parameters
 
-`headers` only touches HTTP headers. Some providers also accept parameters in
-the JSON request *body* — for example OpenRouter's `plugins` presets that select
-a routing strategy:
+`headers` only touches HTTP headers. Some providers also accept
+parameters in the JSON request *body* — for example OpenRouter's
+`plugins` presets that select a routing strategy:
 
 ```json
 {
@@ -588,17 +628,17 @@ a routing strategy:
 }
 ```
 
-`extra_body` injects arbitrary JSON into the completion request body. It is
-shallow-merged (top-level keys win on collision) and works for **every**
-provider — OpenAI, Anthropic, Gemini, Ollama, OpenRouter, and any custom
-provider — not just OpenRouter. The same value is applied to the main agent and
-the isolated `/btw` agent so they behave identically.
+`extra_body` injects arbitrary JSON into the completion request body. It
+is shallow-merged (top-level keys win on collision) and works for
+**every** provider — OpenAI, Anthropic, Gemini, Ollama, OpenRouter, and
+any custom provider — not just OpenRouter. The same value is applied to
+the main agent and the isolated `/btw` agent so they behave identically.
 
 It can be set at two levels, resolved most-specific first:
 
 1. **Per `quick_models` entry** — applies only when that model is active.
-2. **Global top-level `extra_body`** — applies to every model, including the
-   base `model`, unless a matching `quick_models` entry overrides it.
+2. **Global top-level `extra_body`** — applies to every model, including
+   the base `model`, unless a matching `quick_models` entry overrides it.
 
 ```toml
 # Global default — applies to the base model and any model without its own value.
@@ -629,16 +669,16 @@ quick_models:
 ```
 
 Note that body parameters are **provider-specific**: a key one provider
-understands may be ignored or rejected by another. Unlike `temperature`, a
-global `extra_body` does not follow model switches, so prefer setting it per
-`quick_models` entry — bundled with the matching `provider`/`model` — when the
-parameter is tied to a specific provider.
+understands may be ignored or rejected by another. Unlike `temperature`,
+a global `extra_body` does not follow model switches, so prefer setting
+it per `quick_models` entry — bundled with the matching
+`provider`/`model` — when the parameter is tied to a specific provider.
 
 ## Status bar
 
-The status bar at the bottom is configurable through `[statusline]`: up to 3
-lines, each an ordered list of segments. When `[statusline]` is absent, a
-built-in single-line layout is used.
+The status bar at the bottom is configurable through `[statusline]`:
+up to 3 lines, each an ordered list of segments. When `[statusline]` is
+absent, a built-in single-line layout is used.
 
 ```toml
 # Line 1
@@ -688,12 +728,14 @@ Each segment has:
 | `icon`  | Glyph shown before the value. `true` uses the item's built-in icon; a string sets a custom one (a named icon or a literal glyph). Optional. Needs a Nerd Font. |
 | `always` | Force a numeric item (`tokens_input`, `tokens_output`, `cost`) to show even when its value is `0` (normally hidden until non-zero). Optional. |
 
-Items with a built-in icon (used by `icon = true`): `git_branch`, `git_changes`,
-`git_status`, `cwd`, `model`, `cost`, `context_used`/`context_max`/
-`context_percentage`, `session_name`/`session_id`, `prompt`, `mode`, `loop`,
-`btw`, `compaction`. Named custom icons for `icon = "<name>"`: `branch`,
-`folder`, `chip`, `dollar`, `database`, `hash`, `terminal`, `lock`, `pencil`,
-`sync`. Any other value is used literally, so a raw codepoint works too.
+Items with a built-in icon (used by `icon = true`): `git_branch`,
+`git_changes`, `git_status`, `cwd`, `model`, `cost`,
+`context_used`/`context_max`/`context_percentage`,
+`session_name`/`session_id`, `prompt`, `mode`, `loop`, `btw`,
+`compaction`. Named custom icons for `icon = "<name>"`: `branch`,
+`folder`, `chip`, `dollar`, `database`, `hash`, `terminal`, `lock`,
+`pencil`, `sync`. Any other value is used literally, so a raw codepoint
+works too.
 
 ```toml
 [[statusline.lines]]
@@ -703,13 +745,13 @@ segments = [
 ]
 ```
 
-`left`/`right` caps are drawn in the segment's `bg` color (falling back to its
-`color`) over the status-bar background, so they read as the segment's edge.
-They render only when the item is shown, and need a Nerd Font / Powerline font.
-Named caps: `pl_right` (), `pl_left` (), `pl_right_thin` (),
-`pl_left_thin` (), `pl_round_right` (), `pl_round_left` (),
-`pl_flame_right`, `pl_flame_left`. Any other value is used as-is, so a raw
-codepoint like `""` also works. Example:
+`left`/`right` caps are drawn in the segment's `bg` color (falling back
+to its `color`) over the status-bar background, so they read as the
+segment's edge. They render only when the item is shown, and need a
+Nerd Font / Powerline font. Named caps: `pl_right` (), `pl_left` (),
+`pl_right_thin` (), `pl_left_thin` (), `pl_round_right` (),
+`pl_round_left` (), `pl_flame_right`, `pl_flame_left`. Any other value
+is used as-is, so a raw codepoint like `""` also works. Example:
 
 ```toml
 [[statusline.lines]]
@@ -755,47 +797,50 @@ Available items:
 | `separator`           | Literal text from `text` (default a space). Trimmed around hidden items. |
 | `flex_separator`      | Expands to fill the remaining width; several split the space evenly. |
 
-The `git_changes` and `git_status` items run `git status` on focus and after bash tool calls (only
-when one of them is used). All other items are read from the session.
+The `git_changes` and `git_status` items run `git status` on focus and
+after bash tool calls (only when one of them is used). All other items
+are read from the session.
 
 ## Status signals
 
 Status signals are included in this build. Pass
-`--status-socket <path>` to have zerostack-ts report its run state over a Unix
-domain socket at `<path>`, for external status bars or tooling to watch. See
-[STATUS_SIGNALS.md](STATUS_SIGNALS.md) for the full protocol.
+`--status-socket <path>` to have tiny-crow report its run state over a
+Unix domain socket at `<path>`, for external status bars or tooling to
+watch. See [STATUS_SIGNALS.md](STATUS_SIGNALS.md) for the full protocol.
 
 ## Colors
 
-The `colors` object accepts an optional `scheme_type` field and three optional
-string fields for background colors, each of which can be a named color or hex
-color (e.g. `"#1e1e2e"`). Named colors are case-insensitive.
+The `colors` object accepts an optional `scheme_type` field and three
+optional string fields for background colors, each of which can be a
+named color or hex color (e.g. `"#1e1e2e"`). Named colors are
+case-insensitive.
 
 ### `scheme_type`
 
 Controls the terminal color escape sequences emitted. Two values:
 
-- `"full"` (default) — 24-bit true color via RGB escape sequences. Best for
-  modern terminals.
-- `"ansi"` — 256-color palette via ANSI escape sequences. Maps RGB colors to
-  the nearest 256-color match (16 standard + 216 color cube + 24 grayscale).
-  Use this for older terminals or multiplexers that don't support true color.
+- `"full"` (default) — 24-bit true color via RGB escape sequences. Best
+  for modern terminals.
+- `"ansi"` — 256-color palette via ANSI escape sequences. Maps RGB
+  colors to the nearest 256-color match (16 standard + 216 color cube +
+  24 grayscale). Use this for older terminals or multiplexers that
+  don't support true color.
 
 ### Background fields
 
 - `chat_background` — background color for the main conversation buffer.
 - `input_background` — background color for the text input area.
 - `status_background` — background color for the status bar (lowest line).
-- `roles` — map of semantic role → color, overriding the default palette for
-  conversation blocks. Known roles: `user`, `agent`, `reasoning`, `tool`,
-  `tool_result`, `error`, `system`, `welcome`, `permission`, `plain`. Unknown
-  roles and unparsable colors are ignored with a warning. Roles work in theme
-  files too (same `colors` object); a theme without a `roles` map restores
-  the default palette.
+- `roles` — map of semantic role → color, overriding the default
+  palette for conversation blocks. Known roles: `user`, `agent`,
+  `reasoning`, `tool`, `tool_result`, `error`, `system`, `welcome`,
+  `permission`, `plain`. Unknown roles and unparsable colors are ignored
+  with a warning. Roles work in theme files too (same `colors` object);
+  a theme without a `roles` map restores the default palette.
 
-Supported named colors: `reset`, `black`, `red`, `green`, `yellow`, `blue`,
-`magenta`, `cyan`, `white`, `grey`, `dark_grey`, `dark_red`, `dark_green`,
-`dark_yellow`, `dark_blue`, `dark_magenta`, `dark_cyan`.
+Supported named colors: `reset`, `black`, `red`, `green`, `yellow`,
+`blue`, `magenta`, `cyan`, `white`, `grey`, `dark_grey`, `dark_red`,
+`dark_green`, `dark_yellow`, `dark_blue`, `dark_magenta`, `dark_cyan`.
 
 Example:
 ```json
@@ -815,29 +860,33 @@ Example:
 }
 ```
 
-Permission actions are lowercase strings: `allow`, `ask`, or `deny`. Each tool
-rule can be a single action or an object mapping patterns to actions. Supported
-permission tool keys are `bash`, `read`, `write`, `edit`, `grep`, `find_files`,
-`list_dir`, and `todo_write`. MCP-backed tools are checked under
-`mcp_tool:{server_name}:{tool_name}`. Use `"*"` for the default action,
-`external_directory` for absolute-path rules outside the working directory, and
-`doom_loop` for repeated identical tool calls (default: `ask`). If `bash` is
-omitted, zerostack-ts installs its built-in safe bash allow/deny rules.
+## Permission rules in detail
+
+Permission actions are lowercase strings: `allow`, `ask`, or `deny`.
+Each tool rule can be a single action or an object mapping patterns to
+actions. Supported permission tool keys are `bash`, `read`, `write`,
+`edit`, `grep`, `find_files`, `list_dir`, and `todo_write`. MCP-backed
+tools are checked under `mcp_tool:{server_name}:{tool_name}`. Use `"*"`
+for the default action, `external_directory` for absolute-path rules
+outside the working directory, and `doom_loop` for repeated identical
+tool calls (default: `ask`). If `bash` is omitted, tiny-crow installs
+its built-in safe bash allow/deny rules.
 
 There are two config fields for controlling permissions by pattern:
 
 - **`permission`** — patterns are treated as globs (e.g. `**/*.ts`, `src/**`).
-- **`permission-regex`** — same structure as `permission`, but patterns are
-  treated as regular expressions (e.g. `.*\.ts$`, `^src/`). Regex patterns are
-  unanchored — use `^` and `$` to match the full input.
+- **`permission-regex`** — same structure as `permission`, but patterns
+  are treated as regular expressions (e.g. `.*\.ts$`, `^src/`). Regex
+  patterns are unanchored — use `^` and `$` to match the full input.
 
-Both fields can be used together; rules from both are merged. If both define a
-default action (`"*"`), the glob default takes precedence.
+Both fields can be used together; rules from both are merged. If both
+define a default action (`"*"`), the glob default takes precedence.
 
-As a TOML-friendly alternative to the nested `permission` object, you can use
-`permission-allow`, `permission-ask`, and `permission-deny` at the top level.
-Each is a map from tool name to a list of glob patterns. These work side by
-side with the `permission` field and are especially convenient in TOML configs:
+As a TOML-friendly alternative to the nested `permission` object, you
+can use `permission-allow`, `permission-ask`, and `permission-deny` at
+the top level. Each is a map from tool name to a list of glob patterns.
+These work side by side with the `permission` field and are especially
+convenient in TOML configs:
 
 ```toml
 permission-allow = { read = ["src/**", "tests/**"] }
@@ -868,24 +917,27 @@ permission-regex:
     "^rm ": deny
 ```
 
+## MCP servers
+
 With MCP support, `mcp_servers` accepts command-based and URL-based
-servers. Servers can also be added per project via `.zerostack/config.toml`
-(see *Project-local override* above); project servers merge with — and can
-override — global ones by name. Ephemeral servers can be added on the command
-line without touching any config file:
+servers. Servers can also be added per project via
+`.tiny-crow/config.toml` (see *Project-local overrides* above); project
+servers merge with — and can override — global ones by name. Ephemeral
+servers can be added on the command line without touching any config
+file:
 
 ```sh
 # stdio server: NAME=command args... (repeatable; shell quoting honored)
-zerostack-ts --custom-mcp 'local-fs=npx -y @modelcontextprotocol/server-filesystem .'
+tiny-crow --custom-mcp 'local-fs=npx -y @modelcontextprotocol/server-filesystem .'
 # HTTP server: NAME=https://... (repeatable)
-zerostack-ts --custom-mcp-http 'exa=https://mcp.exa.ai/mcp'
+tiny-crow --custom-mcp-http 'exa=https://mcp.exa.ai/mcp'
 ```
 
-CLI servers override same-named config entries; a repeated name keeps the
-last flag. Names must be non-empty with no whitespace, `=`, or `__` (they
-become `mcp__<server>__<tool>` allowlist keys). Invalid entries abort startup
-with an error. Only command/URL servers are expressible on the CLI — `env`,
-headers, OAuth, and timeouts require the config file.
+CLI servers override same-named config entries; a repeated name keeps
+the last flag. Names must be non-empty with no whitespace, `=`, or `__`
+(they become `mcp__<server>__<tool>` allowlist keys). Invalid entries
+abort startup with an error. Only command/URL servers are expressible on
+the CLI — `env`, headers, OAuth, and timeouts require the config file.
 
 ```json
 {
@@ -898,7 +950,7 @@ headers, OAuth, and timeouts require the config file.
     "remote-search": {
       "url": "https://example.com/mcp",
       "headers": {
-        "authorization": "Bearer token"
+        "authorization": "Bearer <redacted>"
       }
     }
   }
@@ -928,16 +980,17 @@ Both server kinds accept optional resilience fields:
 }
 ```
 
-All servers connect concurrently at startup, so one slow server does not delay
-the others. If a server's transport drops mid-session (child process exits,
-HTTP session is lost), the next tool call to that server automatically
-reconnects once and retries the call before reporting an error.
+All servers connect concurrently at startup, so one slow server does
+not delay the others. If a server's transport drops mid-session (child
+process exits, HTTP session is lost), the next tool call to that server
+automatically reconnects once and retries the call before reporting an
+error.
 
 ### OAuth for URL servers
 
-URL-based servers can authenticate with OAuth 2.0 (authorization code + PKCE).
-Add an `oauth` field. Use `true` for defaults (dynamic client registration, no
-extra scopes), or an object for explicit settings:
+URL-based servers can authenticate with OAuth 2.0 (authorization code +
+PKCE). Add an `oauth` field. Use `true` for defaults (dynamic client
+registration, no extra scopes), or an object for explicit settings:
 
 ```json
 {
@@ -966,22 +1019,24 @@ OAuth fields (all optional):
 | `client_id`     | dynamic registration           | Pre-registered client id. When omitted, the client registers on the fly. |
 | `redirect_port` | `8970`                         | Loopback port for the redirect URI `http://127.0.0.1:<port>/callback`.   |
 
-The first time you connect, run `/mcp login <server>` inside the TUI. zerostack-ts
-prints an authorization URL and copies it to your clipboard; open it in a
-browser, approve access, and the redirect is caught on the loopback port. The
-browser wait runs in the background, so the TUI stays responsive (you can keep
-working or select the URL with the mouse to copy it). The token is saved to
-`<data_dir>/mcp-oauth/<server>.json` (mode 0600 on unix), and the server
-reconnects automatically once authorization completes. Later sessions reuse the
-stored refresh token and reconnect without a browser. Use
-`/mcp logout <server>` to remove a stored token. A server with OAuth enabled but
-no stored token fails to connect until you log in.
+The first time you connect, run `/mcp login <server>` inside the TUI.
+Tiny Crow prints an authorization URL and copies it to your clipboard;
+open it in a browser, approve access, and the redirect is caught on the
+loopback port. The browser wait runs in the background, so the TUI stays
+responsive (you can keep working or select the URL with the mouse to
+copy it). The token is saved to `<data_dir>/mcp-oauth/<server>.json`
+(mode 0600 on unix), and the server reconnects automatically once
+authorization completes. Later sessions reuse the stored refresh token
+and reconnect without a browser. Use `/mcp logout <server>` to remove a
+stored token. A server with OAuth enabled but no stored token fails to
+connect until you log in.
 
 ### Recommended MCP servers
 
-When `mcp_servers` is not explicitly set, three recommended MCP servers are
-available. Each can be toggled with a boolean config key (all default to the
-listed API key environment variable when that variable is set):
+When `mcp_servers` is not explicitly set, three recommended MCP servers
+are available. Each can be toggled with a boolean config key (all
+default to the listed API key environment variable when that variable
+is set):
 
 | Key                    | Default | Description                                     | Env var              |
 | ---------------------- | ------- | ----------------------------------------------- | -------------------- |
@@ -989,13 +1044,14 @@ listed API key environment variable when that variable is set):
 | `enable-context7-mcp`  | `false` | Context7 documentation lookup (mcp.context7.com) | `CONTEXT7_API_KEY`   |
 | `enable-grepapp-mcp`   | `false` | Grep.app semantic code search (mcp.grep.app)     | `GREP_APP_API_KEY`   |
 
-Set `enable-exa-mcp = false` to disable the Exa default without touching
-`mcp_servers`. Set `"mcp_servers": {}` to disable all MCP auto-configuration.
+Set `enable-exa-mcp = false` to disable the Exa default without
+touching `mcp_servers`. Set `"mcp_servers": {}` to disable all MCP
+auto-configuration.
 
 ## ACP (Agent Communication Protocol) configuration
 
-With ACP support, zerostack-ts can act as an ACP agent server.
-The following config keys are available:
+With ACP support, tiny-crow can act as an ACP agent server. The
+following config keys are available:
 
 | Key           | Type    | Description                                            |
 | ------------- | ------- | ------------------------------------------------------ |
@@ -1017,21 +1073,23 @@ ACP server configs (in `acp_servers`) support two transport types:
 }
 ```
 
-When `--acp` is passed without `--acp-host`, zerostack-ts runs in stdio mode
-(the editor spawns it as a subprocess). With `--acp-host`, it listens on TCP.
+When `--acp` is passed without `--acp-host`, tiny-crow runs in stdio
+mode (the editor spawns it as a subprocess). With `--acp-host`, it
+listens on TCP.
 
 ## TOML configuration
 
-Within each search directory, zerostack-ts picks the first existing file in
+Within each search directory, tiny-crow picks the first existing file in
 this priority order: `config.toml`, `config.yaml`, `config.yml`, then
-`config.json`. `config.json` is kept for backwards compatibility — since YAML
-is a superset of JSON, legacy JSON configs parse transparently through the
-YAML reader. If none exists, a default `config.toml` is created automatically.
+`config.json`. `config.json` is kept for backwards compatibility — since
+YAML is a superset of JSON, legacy JSON configs parse transparently
+through the YAML reader. If none exists, a default `config.toml` is
+created automatically.
 
-TOML is especially well suited for zerostack-ts's permission rules and structured
-settings. Hyphenated keys such as `permission-regex`, `permission-allow`,
-`permission-ask`, and `permission-deny` are idiomatic in TOML and avoid deeply
-nested tables:
+TOML is especially well suited for tiny-crow's permission rules and
+structured settings. Hyphenated keys such as `permission-regex`,
+`permission-allow`, `permission-ask`, and `permission-deny` are idiomatic
+in TOML and avoid deeply nested tables:
 
 ```toml
 permission-allow = { read = ["src/**", "tests/**"] }
@@ -1039,7 +1097,8 @@ permission-ask = { bash = ["rm **"] }
 permission-deny = { write = ["/etc/**", "/usr/**"] }
 ```
 
-For more complex configurations, explicit TOML tables provide clear structure:
+For more complex configurations, explicit TOML tables provide clear
+structure:
 
 ```toml
 [permission]
@@ -1057,21 +1116,21 @@ For more complex configurations, explicit TOML tables provide clear structure:
 ### Key naming in TOML
 
 All top-level keys use kebab-case when they contain hyphens (e.g.
-`permission-allow`, `allow-all-mcp-calls`). Simple keys use the same name as
-their YAML counterpart. Quoted keys (`"*"`, `"**"`) are required when the key
-contains special characters like `*` or `/`.
+`permission-allow`, `allow-all-mcp-calls`). Simple keys use the same
+name as their YAML counterpart. Quoted keys (`"*"`, `"**"`) are required
+when the key contains special characters like `*` or `/`.
 
-## Edit System Modes
+## Edit system modes
 
-zerostack-ts supports two edit systems, selectable via `edit_system` config key,
-`--edit-system` CLI flag, or `/editsys` slash command:
+Tiny Crow supports two edit systems, selectable via `edit_system`
+config key, `--edit-system` CLI flag, or `/editsys` slash command:
 
 ### `similarity` (default)
 
-The classic aider-style SEARCH/REPLACE format. The LLM copies exact text from
-read output into `<<<<<<< SEARCH` blocks and provides replacements in
-`>>>>>>> REPLACE` blocks. Falls back to whitespace normalization and fuzzy
-matching when the exact text doesn't match.
+The classic aider-style SEARCH/REPLACE format. The LLM copies exact text
+from read output into `<<<<<<< SEARCH` blocks and provides replacements
+in `>>>>>>> REPLACE` blocks. Falls back to whitespace normalisation and
+fuzzy matching when the exact text doesn't match.
 
 ```
 edit_system = "similarity"
@@ -1079,15 +1138,16 @@ edit_system = "similarity"
 
 ### `hashedit`
 
-Tag-based edits using CRC-32 line hashes and file-level CAS (check-and-set)
-tokens. The read tool annotates each line with an 8-char hex CRC-32 tag (e.g.
-`"  10|f1e2d3c4 int count = 10;"`) and a file-level CRC header. The edit tool
-receives tagged lines from the read output and provides only the replacement
-text — no old-text reproduction needed.
+Tag-based edits using CRC-32 line hashes and file-level CAS
+(check-and-set) tokens. The read tool annotates each line with an 8-char
+hex CRC-32 tag (e.g. `"  10|f1e2d3c4 int count = 10;"`) and a file-level
+CRC header. The edit tool receives tagged lines from the read output
+and provides only the replacement text — no old-text reproduction needed.
 
 Key advantages:
-- **Token-efficient**: No old-text reproduction (significant savings for
-  deletions and large edits)
+
+- **Token-efficient**: No old-text reproduction (significant savings
+  for deletions and large edits)
 - **CAS-guarded**: File-level CRC prevents applying edits to stale content
 - **Reliable**: Per-line tag validation catches content mismatches
 
@@ -1095,21 +1155,21 @@ Key advantages:
 edit_system = "hashedit"
 ```
 
-Switching between modes is immediate and does not require agent restart.
-The `/editsys` `similarity` and `/editsys` `hashedit` slash commands
-provide the same functionality at runtime.
+Switching between modes is immediate and does not require agent
+restart. The `/editsys` `similarity` and `/editsys` `hashedit` slash
+commands provide the same functionality at runtime.
 
 ## Prompt directives
 
-Custom prompt `.md` files may include a `%%mode=<mode>` directive on the
-**first line** to automatically switch the security mode when the prompt
-is activated (via `/prompt <name>` or as the `default_prompt`).
+Custom prompt `.md` files may include a `%%mode=<mode>` directive on
+the **first line** to automatically switch the security mode when the
+prompt is activated (via `/prompt <name>` or as the `default_prompt`).
 
 Valid modes: `standard`, `restrictive`, `readonly`, `guarded`, `yolo`.
 
 Use `%%mode=last_user_mode` to keep (or restore) the mode the user last
-set explicitly via `/mode` or startup config — useful when a prompt wants
-to avoid overriding the user's chosen mode.
+set explicitly via `/mode` or startup config — useful when a prompt
+wants to avoid overriding the user's chosen mode.
 
 The directive line is stripped from the prompt content before it reaches
 the agent.
@@ -1140,13 +1200,15 @@ The status bar shows `| mode:<name>` when the mode is not `standard`.
 
 ## Prompt-to-model switching
 
-The `[prompt_to_model]` table maps prompt names to quick-model names. When
-you switch to a prompt (via `/prompt`, `.name`, `/review`, chain transitions,
-or `default_prompt` at startup), zerostack-ts looks up the mapping and
-automatically switches the active model to the corresponding quick model.
+The `[prompt_to_model]` table maps prompt names to quick-model names.
+When you switch to a prompt (via `/prompt`, `.name`, `/review`, chain
+transitions, or `default_prompt` at startup), tiny-crow looks up the
+mapping and automatically switches the active model to the
+corresponding quick model.
 
-Values are quick-model names — the same names defined in `[quick_models]`.
-An empty string (`""`) means "no change", so the current model stays active.
+Values are quick-model names — the same names defined in
+`[quick_models]`. An empty string (`""`) means "no change", so the
+current model stays active.
 
 ```toml
 [prompt_to_model]
@@ -1157,27 +1219,31 @@ brainstorm = ""
 ```
 
 With this config:
+
 - `/prompt plan` or `.plan` switches to the `glm-52` quick model.
 - `/prompt code` or `.code` switches to `deepseek-v4-pro`.
 - `/review` switches to `qwen37-plus`.
 - `/prompt brainstorm` or `.brainstorm` does **not** change the current model.
 
 When you run `/prompt default` (clearing the active prompt), the model
-reverts to the session's default model (from `model` / `provider` config
-or `--quick-model`).
+reverts to the session's default model (from `model` / `provider`
+config or `--quick-model`).
 
 The model switch writes a line to chat:
 `switched to model: glm-52 (from prompt 'plan')`
 
-## Chain-of-Prompts
+## Chain-of-prompts
 
-When enabled, after the agent finishes responding with a `brainstorm`, `plan`,
-or `code` prompt, the status bar shows `Continue to <next>? [Yes/But/No]`.
-The user's next input is interpreted as a chain decision:
+When enabled, after the agent finishes responding with a `brainstorm`,
+`plan`, or `code` prompt, the status bar shows
+`Continue to <next>? [Yes/But/No]`. The user's next input is interpreted
+as a chain decision:
 
-- **Yes** (`y`/`yes`) — switch to the next prompt and auto-submit a transition message.
-- **But** (`but <msg>` / `b <msg>` / `yes but <msg>`) — same as yes, but prepend
-  `<msg>` as an additional instruction to the transition message.
+- **Yes** (`y`/`yes`) — switch to the next prompt and auto-submit a
+  transition message.
+- **But** (`but <msg>` / `b <msg>` / `yes but <msg>`) — same as yes,
+  but prepend `<msg>` as an additional instruction to the transition
+  message.
 - **No** (`n`/`no`) — decline the chain, continue normally.
 
 Typing anything that doesn't match these patterns clears the chain and
@@ -1211,11 +1277,12 @@ chain:
 
 ## Advisor
 
-The advisor tool lets the agent consult a stronger reviewer model (or the
-user, in human-handoff mode) for strategic guidance before making important
-decisions. This follows the [advisor strategy](https://claude.com/blog/the-advisor-strategy):
-a cheaper "executor" model drives the task and escalates to a more capable
-model only when needed.
+The advisor tool lets the agent consult a stronger reviewer model (or
+the user, in human-handoff mode) for strategic guidance before making
+important decisions. This follows the [advisor
+strategy](https://claude.com/blog/the-advisor-strategy): a cheaper
+"executor" model drives the task and escalates to a more capable model
+only when needed.
 
 ### TOML
 
@@ -1249,16 +1316,17 @@ advisor:
 | `--advisor-human-handoff[=<bool>]` | Route advisor calls to the user instead of a model. Bare flag or `=true` enables it; CLI default is `false` unless passed |
 | `--advisor-kilobytes-limit <n>` | Max KB of conversation context sent to advisor (default: 256) |
 
-**Known quirk:** the CLI flag always supplies a value (`Some(false)` when not
-passed), so `resolve_advisor_human_handoff()` never falls through to the
-config file's `human_handoff` key in practice. Use `--advisor-human-handoff`
-or the `/advisor handoff on` runtime command to actually enable it; setting
-`human_handoff` in the config file alone currently has no effect.
+**Known quirk:** the CLI flag always supplies a value (`Some(false)`
+when not passed), so `resolve_advisor_human_handoff()` never falls
+through to the config file's `human_handoff` key in practice. Use
+`--advisor-human-handoff` or the `/advisor handoff on` runtime command
+to actually enable it; setting `human_handoff` in the config file alone
+currently has no effect.
 
 ### Human handoff mode
 
-When enabled, the agent's advisor calls are redirected to the
-user instead of a second model. The agent pauses, shows its question, and the
+When enabled, the agent's advisor calls are redirected to the user
+instead of a second model. The agent pauses, shows its question, and the
 user types a response. This is useful for:
 
 - Reviewing the agent's approach before it writes code
@@ -1280,13 +1348,14 @@ The `/advisor` slash command provides runtime control:
 
 ## LSP
 
-zerostack-ts can run language servers for the files the agent edits and feed
-diagnostics (errors/warnings) back into `edit`/`write` tool results — the
-agent sees type errors immediately instead of discovering them on the next
-build. An `lsp_diagnostics` tool also lets the agent query one file or the
-whole project on demand.
+Tiny Crow can run language servers for the files the agent edits and
+feed diagnostics (errors/warnings) back into `edit`/`write` tool results
+— the agent sees type errors immediately instead of discovering them on
+the next build. An `lsp_diagnostics` tool also lets the agent query one
+file or the whole project on demand.
 
-This integration is behind the non-default `lsp` optional subsystem — enabled through its configuration (see the corresponding section below).
+This integration is behind the non-default `lsp` optional subsystem —
+enabled through its configuration (see the corresponding section below).
 
 ### TOML
 
@@ -1302,7 +1371,7 @@ extensions = [".ts", ".tsx"]
 command = "my-ls"
 args = ["--stdio"]
 extensions = [".my"]
-# env = { ZS_LOG = "debug" }
+# env = { TC_LOG = "debug" }
 # initialization = { ... }   # server-specific initializationOptions
 # disabled = false           # true removes a same-named built-in
 ```
@@ -1318,37 +1387,38 @@ lsp:
       extensions: [".ts", ".tsx"]
 ```
 
-Built-in server defaults (used only when the server program is on PATH):
-typescript-language-server, gopls, pyright-langserver,
-clangd, bash-language-server, lua-language-server.
+Built-in server defaults (used only when the server program is on
+PATH): typescript-language-server, gopls, pyright-langserver, clangd,
+bash-language-server, lua-language-server.
 
-Behavior notes:
+Behaviour notes:
 
-- Servers are **PATH programs only** — zerostack-ts never auto-installs a
+- Servers are **PATH programs only** — tiny-crow never auto-installs a
   language server. A missing program is skipped with a debug log.
-- Servers start lazily on the first edit touching one of their extensions
-  (workspace root = session cwd) and stop when zerostack-ts exits.
+- Servers start lazily on the first edit touching one of their
+  extensions (workspace root = session cwd) and stop when tiny-crow exits.
 - Everything is fail-open: a hung or crashed server only means "no
   diagnostics", never a failed edit.
-- Post-edit diagnostics are capped (errors first, ~20 lines); nothing is
-  appended when the file is clean.
+- Post-edit diagnostics are capped (errors first, ~20 lines); nothing
+  is appended when the file is clean.
 
 ## rtk output filtering
 
-zerostack-ts can route bash commands through [rtk](https://github.com/rtk-ai/rtk),
-an external CLI proxy that filters and compresses command output before it
-reaches the model context (e.g. tests report failures only, `git status`
-returns a compact summary). rtk claims up to 90% reduction of bash output
-tokens.
+Tiny Crow can route bash commands through
+[rtk](https://github.com/rtk-ai/rtk), an external CLI proxy that filters
+and compresses command output before it reaches the model context (e.g.
+tests report failures only, `git status` returns a compact summary).
+rtk claims up to 90% reduction of bash output tokens.
 
-This integration is behind the non-default `rtk` optional subsystem — enabled through its configuration (see the corresponding section below).
+This integration is behind the non-default `rtk` optional subsystem —
+enabled through its configuration (see the corresponding section below).
 
-When enabled, every `bash` tool command is passed through `rtk rewrite` before
-execution. rtk decides which commands have a compact equivalent — unsupported
-commands run unchanged. Permission checks always run against the original
-command, so existing permission patterns keep working. The integration is
-fail-open: if the program is missing, times out, or errors, the original
-command runs unfiltered.
+When enabled, every `bash` tool command is passed through `rtk rewrite`
+before execution. rtk decides which commands have a compact equivalent
+— unsupported commands run unchanged. Permission checks always run
+against the original command, so existing permission patterns keep
+working. The integration is fail-open: if the program is missing, times
+out, or errors, the original command runs unfiltered.
 
 ### TOML
 
@@ -1366,61 +1436,63 @@ rtk:
   path: rtk
 ```
 
-When active, a short note is appended to the system prompt telling the model
-that bash output is compacted and that rtk writes full raw output to a tee log
-on failure.
+When active, a short note is appended to the system prompt telling the
+model that bash output is compacted and that rtk writes full raw output
+to a tee log on failure.
 
 ## Logging
 
-zerostack-ts uses built-in logging for structured logging. By default, only
-warnings and errors are printed to stderr at the `warn` level (with the provider client silenced). Full debug and trace output is available via CLI flags.
+Tiny Crow uses built-in logging for structured logging. By default,
+only warnings and errors are printed to stderr at the `warn` level
+(with the provider client silenced). Full debug and trace output is
+available via CLI flags.
 
 ### Verbose mode (`-v` / `--verbose`)
 
 ```bash
-zerostack-ts -v
+tiny-crow -v
 ```
 
 Enables full trace-level logging to a timestamped log file under
-`~/.local/share/zerostack/logs/` (or `$ZS_DATA_DIR/logs/`). The log file is
-named `zerostack-YYYY-MM-DD_HH-MM-SS_<pid>.log`. A new file is created per
-instance — previous runs are never overwritten.
+`~/.local/share/tiny-crow/logs/` (or `$TC_DATA_DIR/logs/`). The log file
+is named `tiny-crow-YYYY-MM-DD_HH-MM-SS_<pid>.log`. A new file is
+created per instance — previous runs are never overwritten.
 
-With `-v`, stderr output stays at the default `warn` level so the TUI remains
-clean. The log file captures everything at `trace` level for all zerostack-ts
-modules.
+With `-v`, stderr output stays at the default `warn` level so the TUI
+remains clean. The log file captures everything at `trace` level for
+all tiny-crow modules.
 
 ### Custom log file (`--log-file`)
 
 ```bash
-zerostack-ts --log-file /tmp/debug.log
+tiny-crow --log-file /tmp/debug.log
 ```
 
-Writes full trace-level logs to the specified path instead of the default
-location. Implies `-v` for the file output. Can be combined with `-v` (no
-effect on the path, since `--log-file` takes precedence).
+Writes full trace-level logs to the specified path instead of the
+default location. Implies `-v` for the file output. Can be combined
+with `-v` (no effect on the path, since `--log-file` takes precedence).
 
 ### Custom stderr log level (`--log-level`)
 
 ```bash
-zerostack-ts --log-level debug
+tiny-crow --log-level debug
 ```
 
-Sets the minimum level for stderr output. Accepted values: `trace`, `debug`,
-`info`, `warn`, `error`. This overrides the `ZS_LOG` environment variable.
+Sets the minimum level for stderr output. Accepted values: `trace`,
+`debug`, `info`, `warn`, `error`. This overrides the `TC_LOG`
+environment variable.
 
-### Environment variable (`ZS_LOG`)
+### Environment variable (`TC_LOG`)
 
-The standard `ZS_LOG` environment variable is still supported for backward
-compatibility:
+The standard `TC_LOG` environment variable is still supported:
 
 ```bash
-ZS_LOG=debug zerostack-ts          # debug level for zerostack-ts
-ZS_LOG=debug zerostack-ts             # debug for everything except provider internals
-ZS_LOG=trace zerostack-ts  # trace-level output
+TC_LOG=debug tiny-crow          # debug level for tiny-crow
+TC_LOG=debug tiny-crow             # debug for everything except provider internals
+TC_LOG=trace tiny-crow  # trace-level output
 ```
 
-Priority (highest wins): `--log-level` > `ZS_LOG` env > default `warn`.
+Priority (highest wins): `--log-level` > `TC_LOG` env > default `warn`.
 
 ### Logged subsystems
 
@@ -1436,4 +1508,3 @@ With `-v`, the following subsystems produce debug/trace output:
 - **Memory**: store open, write operations (target/bytes), searches, tool entry points
 - **Advisor**: initialization (model, enabled, max uses), tool call prompts
 - **Filesystem**: atomic write paths and byte counts
-

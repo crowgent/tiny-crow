@@ -155,7 +155,7 @@ export class AuthResolver {
       `No API key found. Set the ${envVar} environment variable, ` +
         `add it to config.api_keys under '${providerKindSlug(this.providerKind)}' ` +
         `or '${this.customProviderName ?? "provider_name"}', pass --api-key, ` +
-        `or run \`zerostack-ts --setup\` to configure interactively.`,
+        `or run \`tiny-crow --setup\` to configure interactively.`,
     );
   }
 }

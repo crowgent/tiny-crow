@@ -4,7 +4,7 @@ import * as path from "node:path";
 import { Sandbox } from "../src/sandbox.ts";
 
 export function scratchDir(group: string, name: string): string {
-  return path.join(os.tmpdir(), `zerostack-${group}-${name}-${process.pid}`);
+  return path.join(os.tmpdir(), `tiny-crow-${group}-${name}-${process.pid}`);
 }
 
 export function pairAt(

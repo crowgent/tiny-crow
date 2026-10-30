@@ -1,34 +1,42 @@
 ---
-description: "Get started with zerostack-ts: install the minimal TypeScript coding agent, configure an LLM provider, and run your first session."
+description: "Get started with tiny-crow: install the minimal TypeScript coding agent, configure an LLM provider, and run your first session."
 ---
 
-# Part 1. Get Started
+# Getting Started with Tiny Crow
 
-Thanks for picking up zerostack-ts, here you can find a easy guide on installing zerostack-ts, setting up a model, and getting to know the basic commands.
+This guide takes you from a fresh checkout to a working session: install
+the agent, connect a model, and learn the commands you will use every
+day.
 
-This tutorial is designed to work on any Linux, macOS and WSL environment; if you are using Windows, we recommned using WSL, as Windows support is not currently mantained.
+It is written for Linux, macOS, and WSL. On Windows, use WSL — native
+Windows support is not currently maintained.
 
-## 1. Installation
+## Installing
 
-Install from a checkout — no build step is needed, Node.js 24 or newer runs the TypeScript sources directly:
+There is no build step: Node.js 24 or newer runs the TypeScript sources
+directly.
+
 ```bash
 git clone <this repository>
-cd zerostack-ts
+cd tiny-crow
 npm install   # no runtime dependencies; installs dev tooling only
 ```
 
-Then run it with `npm start`, or link the entry point onto your PATH:
+Then either run it with `npm start`, or link the entry point onto your
+PATH:
 
 ```bash
-ln -s "$PWD/src/main.ts" ~/.local/bin/zerostack-ts
+ln -s "$PWD/src/main.ts" ~/.local/bin/tiny-crow
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-## 2. Setting up the provider
+## Connecting a provider
 
-zerostack-ts defaults to **OpenRouter**, which is a provider that gives access to hundreds of models through a single API key, without needing per-provider signup; OpenRouter also offers the great advantage of connecting to free models, which we'll use for completing this setup.
+Tiny Crow defaults to **OpenRouter**, which gives access to hundreds of
+models through one API key, without a separate signup per provider.
+OpenRouter also offers free models, which is what this setup uses.
 
-### Get an OpenRouter API key
+### Getting an OpenRouter key
 
 1. Go to [openrouter.ai/keys](https://openrouter.ai/keys)
 2. Create a key
@@ -40,11 +48,11 @@ export OPENROUTER_API_KEY="sk-or-v1-..."
 
 Add that line to `~/.bashrc` or `~/.zshrc` to make it permanent.
 
-### Or use another provider
+### Using a different provider
 
-While we showed OpenRouter, you can set up all mainstream provider, local inference engines, and all OpenAI-compatible servers.
-
-You can just set the matching env var with :
+OpenRouter is only the default. Mainstream providers, local inference
+engines, and any OpenAI-compatible server are all supported — just set
+the matching environment variable:
 
 | Provider   | Env var               |
 | ---------- | --------------------- |
@@ -53,48 +61,61 @@ You can just set the matching env var with :
 | Gemini     | `GEMINI_API_KEY`      |
 | Ollama     | (none — local)        |
 
-Then, you can change your configuration file (`~/.local/share/zerostack/config.toml` on Linux/WSL or `~/Library/Application Support/zerostack/` on macOS, unless overridden by `$ZS_CONFIG_DIR` or an existing `~/.config/zerostack/` file — see [CONFIG.md](CONFIG.md) for the full precedence) by adding `provider = [provider_name]` in order to change your default provider.
+Then change the default provider in your config file
+(`~/.local/share/tiny-crow/config.toml` on Linux/WSL or
+`~/Library/Application Support/tiny-crow/` on macOS, unless overridden
+by `$TC_CONFIG_DIR` or an existing `~/.config/tiny-crow/` file — see
+[CONFIG.md](CONFIG.md) for the full precedence) by setting
+`provider = [provider_name]`.
 
-If you are using a provider that's not your default one, use the `--provider` CLI flag:
+To use a non-default provider for one run only, pass the flag:
 
 ```bash
-zerostack-ts --provider anthropic
+tiny-crow --provider anthropic
 ```
 
-See [Providers](PROVIDERS.md) for custom endpoints, header configuration, and prompt caching details.
+See [Providers](PROVIDERS.md) for custom endpoints, header
+configuration, and prompt caching details.
 
-## 3. Pick a Model
+## Choosing a model
 
-OpenRouter models use the format `provider/model-name`: [here](https://openrouter.ai/models?order=top-weekly) you can find the currently most used models, and [here](https://openrouter.ai/models?order=top-weekly&max_price=0) you can list only free models sorted by usage.
+OpenRouter models use the `provider/model-name` format: the most-used
+models are listed [here](https://openrouter.ai/models?order=top-weekly),
+and free models sorted by usage
+[here](https://openrouter.ai/models?order=top-weekly&max_price=0).
 
-Models can be changed using the provider's model name via the `/model` command.
+Switch models mid-session with the `/model` command, using the
+provider's model name.
 
-## 4. How to use Quick Models
+## Quick models: short names for provider + model pairs
 
-Using model strings is kinda annoying, as it requires for you both to insert long model names and to be using the correct provider: that's why zerostack-ts implements Quick Models, an alias that sets both the model and the provider that the agent must used.
+Typing full model strings gets tedious, and it is easy to pair a model
+with the wrong provider. Quick models fix both problems: one alias sets
+the provider and the model together.
 
-A quick model can be added in the configuration by doing something like:
+Add one in the configuration like this:
+
 ```
 [quick_models.fast]
 provider = "openrouter"
 model = "deepseek/deepseek-v4-flash"
 ```
 
-From there, you can use the `model` field in the configuration file to set the default model, or use `/models` to use an interactive picker directly in the agent.
+From there, set the `model` field in the configuration file to make it
+the default, or use `/models` for an interactive picker inside the
+agent.
 
-## 5. Start a Session
+## Your first session
 
-You are now ready to launch zerostack-ts! Just run `zerostack-ts` and look at the beautiful TUI; type a message, press Enter and the agent will responds with streaming tokens.
+You are ready. Run `tiny-crow`, look at the TUI, type a message, press
+Enter, and the agent answers with streaming tokens.
 
-It can read, write, edit, and search your codebase, while giving full control to the user on what it's allowed to do.
+It can read, write, edit, and search your codebase, while you keep full
+control over what it is allowed to do.
 
-# Part 2. Useful commands
+## Everyday commands
 
-Now that you are in, you might want to be able to control the agent, and here's how:
-
-## 1. Essential commands
-
-By pressing `/` on an empty message, you can select any command to send the agent; here are the most useful commands:
+Press `/` on an empty message to pick any command. The most useful:
 
 | Command | What it does |
 | ------- | ------------ |
@@ -110,9 +131,11 @@ By pressing `/` on an empty message, you can select any command to send the agen
 | `/rename <name>` | Rename the current session |
 | `/quit` | Exit |
 
-## 2. Prompts
+## Prompts: changing how the agent behaves
 
-Prompts change *how* the agent behaves. Type `.` at the start of a message to one: if it's followed by some text, the prompt will be used only for that message; if not, it will be set as the default for the rest of the session.
+Type `.` at the start of a message to use a prompt: if text follows, the
+prompt applies to that message only; if not, it becomes the default for
+the rest of the session.
 
 | Prompt | Use for |
 | ------ | ------- |
@@ -124,32 +147,32 @@ Prompts change *how* the agent behaves. Type `.` at the start of a message to on
 | `debug` | Systematic debugging |
 | `refactor` | Restructuring existing code |
 
-This is the short list; run `/prompt` in the agent (or see the root
+That is the short list. Run `/prompt` in the agent (or see the root
 [README](../README.md)) for the full set of built-in prompts,
 including `frontend-design`, `review-security`, `simplify`, `write-prompt`,
 `autoconfig`, `orchestrator`, and `write-text`.
 
-## 3. Autoconfig
+## Autoconfig: let the agent do the setup
 
-There is one special prompt, called `autoconfig`, that has full access to your zerostack-ts configuration and to the project's documentation: after reading this Get Started guide, you might decide to just never read any documentation or any configuration file for zerostack-ts, you just need to load `autoconfig` and everything will be managed.
+There is one special prompt, `autoconfig`, that has full access to your
+tiny-crow configuration and to the project's documentation. After
+reading this guide, you may decide never to read documentation or a
+configuration file again — just load `autoconfig` and everything will
+be managed.
 
-## 4. Keybindings
-
-Here is some keybindings to speed up your coding experience:
+## Keybindings
 
 | Keys | Action |
 | ---- | ------ |
 | `Ctrl+R` | Toggle reasoning/thinking |
 | `Ctrl+G` | Open input in `$EDITOR` |
-| `Ctrl+H` | Launches `lazygit` (disable with `--disable-lazygit`)
+| `Ctrl+H` | Launches `lazygit` (disable with `--disable-lazygit`) |
 | `Ctrl+S` | Force-save session |
 | `Ctrl+C` | Interrupt the agent |
 | `PgUp` / `PgDn` | Scroll chat |
 | `Home` / `End` | Jump to top/bottom |
 
-## 5. CLI flags
-
-If you want to use zerostack-ts from scripts, from other programs, or if you just want to load up the agent in whatever way you prefer, there are some CLI flags you might want to know about:
+## CLI flags for scripts and one-off runs
 
 | Flag | Action |
 | ---- | ------ |
@@ -166,11 +189,11 @@ If you want to use zerostack-ts from scripts, from other programs, or if you jus
 | `--worktree` | Run the agent inside a git worktree (Experimental) |
 | `--parallel` | Run the agent inside a self-managed git worktree (Experimental) |
 | `--load-prompt <prompt>` | Use a specific prompt |
-| `--prompts-dir <path>` | Extra prompts directory, highest precedence (repeatable, last wins; `ZS_PROMPTS_DIR` appends `:`-separated dirs) |
+| `--prompts-dir <path>` | Extra prompts directory, highest precedence (repeatable, last wins; `TC_PROMPTS_DIR` appends `:`-separated dirs) |
 | `--custom-mcp NAME=cmd args...` | Add a stdio MCP server (repeatable, overrides config) |
 | `--custom-mcp-http NAME=URL` | Add an HTTP MCP server (repeatable, overrides config) |
 
-## 6. Opt-in subsystems
+## Optional subsystems
 
 Everything above ships in the default build. A few extras are
 available as optional subsystems: lifecycle hooks (see CONFIG.md),
@@ -178,8 +201,9 @@ a second-model advisor (`--advisor`), image/PDF message attachments,
 and ACP editor integration (`--acp`). See CONFIG.md for what each one
 does and how to enable it.
 
-# Conclusions
+## Where to go next
 
-Thanks for reading the *Get Started* guide until the end!
-
-I hope that you liked reading about zerostack-ts, and that you'll enjoy using this agent; you can discover more about the configuration abilites and the integrated commands of the agent by reading the documentation, by asking questions to the `autoconfig` prompt, or by experimenting with the `/` interactive picker.
+Thanks for reading the *Getting Started* guide to the end. Discover
+more about configuration and the agent's built-in commands by reading
+the documentation, by asking the `autoconfig` prompt questions, or by
+experimenting with the `/` interactive picker.

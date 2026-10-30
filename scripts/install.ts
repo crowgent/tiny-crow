@@ -1,5 +1,5 @@
-// Install zerostack-ts: check Node >= 24, then install the TS project so
-// a `zerostack-ts` command lands on PATH.
+// Install tiny-crow: check Node >= 24, then install the TS project so
+// a `tiny-crow` command lands on PATH.
 //
 // Two install paths:
 //   * From a checkout (the default when this script runs from a checkout):
@@ -42,7 +42,7 @@ import { fileURLToPath } from "node:url";
 
 export const MIN_NODE_MAJOR = 24;
 export const DEFAULT_INSTALL_DIR = path.join(os.homedir(), ".local", "bin");
-export const DEFAULT_COMMAND_NAME = "zerostack-ts";
+export const DEFAULT_COMMAND_NAME = "tiny-crow";
 
 export interface InstallArgs {
   dir?: string;
@@ -86,7 +86,7 @@ export function printInstallHelp(): void {
       "  --from <dir>       Checkout to install from (default: this repo root)\n" +
       "  --tarball <source> Tarball file path or http(s) URL to install from\n" +
       "  --sha256 <hex>     Expected SHA-256 of the tarball (verified when given)\n" +
-      "  --name <name>      Command name to install (default: zerostack-ts)\n" +
+      "  --name <name>      Command name to install (default: tiny-crow)\n" +
       "  --help, -h         Show this message",
   );
 }
@@ -119,7 +119,7 @@ export function shellQuote(value: string): string {
 export function launcherContent(mainPath: string): string {
   return (
     "#!/bin/sh\n" +
-    `# zerostack-ts launcher: runs the TS sources directly with Node.\n` +
+    `# tiny-crow launcher: runs the TS sources directly with Node.\n` +
     `exec node ${shellQuote(mainPath)} "$@"\n`
   );
 }
@@ -201,7 +201,7 @@ function findExtractedCheckout(tmpDir: string): string {
       return candidate;
     }
   }
-  throw new Error("Could not find a zerostack-ts checkout in the archive.");
+  throw new Error("Could not find a tiny-crow checkout in the archive.");
 }
 
 export async function installFromTarball(
@@ -210,7 +210,7 @@ export async function installFromTarball(
   installDir: string,
   name: string = DEFAULT_COMMAND_NAME,
 ): Promise<{ launcherPath: string; version: string }> {
-  console.log(`Downloading zerostack-ts from ${source}...`);
+  console.log(`Downloading tiny-crow from ${source}...`);
   const bytes = await downloadBytes(source);
   const actual = sha256Hex(bytes);
   console.log(`  sha256: ${actual}`);
@@ -219,7 +219,7 @@ export async function installFromTarball(
       `SHA-256 mismatch: expected ${expectedSha256}, got ${actual}`,
     );
   }
-  const tmpDir = mkdtempSync(path.join(os.tmpdir(), "zerostack-ts-install-"));
+  const tmpDir = mkdtempSync(path.join(os.tmpdir(), "tiny-crow-install-"));
   try {
     const archivePath = path.join(tmpDir, "archive.tar.gz");
     writeFileSync(archivePath, bytes);

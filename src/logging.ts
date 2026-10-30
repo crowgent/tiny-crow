@@ -26,7 +26,7 @@ export function crashLogDir(): string {
 export function resolveCrashLogPath(): string {
   const dir = crashLogDir();
   const ts = formatTimestamp(new Date());
-  return path.join(dir, `zerostack-ts-crash-${ts}_${process.pid}.log`);
+  return path.join(dir, `tiny-crow-crash-${ts}_${process.pid}.log`);
 }
 
 function formatTimestamp(d: Date): string {
@@ -45,7 +45,7 @@ export function writeCrashReport(error: unknown, location?: string): string | un
   } catch {
     return undefined;
   }
-  let content = "zerostack-ts crash report\n";
+  let content = "tiny-crow crash report\n";
   content += `time: ${new Date().toISOString()}\n`;
   content += `version: ${VERSION}\n\n`;
   content += `panic: ${error instanceof Error ? error.message : String(error)}\n`;
@@ -85,7 +85,7 @@ export function resolveLogPath(cli: Cli): string | undefined {
       // best effort
     }
     const ts = formatTimestamp(new Date());
-    return path.join(logsDir, `zerostack-ts-${ts}_${process.pid}.log`);
+    return path.join(logsDir, `tiny-crow-${ts}_${process.pid}.log`);
   }
   return undefined;
 }
@@ -93,7 +93,7 @@ export function resolveLogPath(cli: Cli): string | undefined {
 export function buildStderrFilter(cli: Cli): LogLevel {
   const lvl = cli.logLevel?.toLowerCase();
   if (lvl && lvl in LEVEL_ORDER) return lvl as LogLevel;
-  const env = process.env["RUST_LOG"] ?? process.env["ZS_LOG"];
+  const env = process.env["RUST_LOG"] ?? process.env["TC_LOG"];
   if (env) {
     const first = env.split(",")[0]!.split("=")[0]!.trim().toLowerCase();
     if (first in LEVEL_ORDER) return first as LogLevel;

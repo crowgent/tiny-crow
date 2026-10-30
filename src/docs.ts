@@ -28,7 +28,7 @@ export function globalDocsDir(): string {
 
 function docsSourceDirs(): string[] {
   const dirs: string[] = [];
-  if (process.env["ZS_DOCS_DIR"]) dirs.push(process.env["ZS_DOCS_DIR"]!);
+  if (process.env["TC_DOCS_DIR"]) dirs.push(process.env["TC_DOCS_DIR"]!);
   dirs.push(path.join(process.cwd(), "docs"));
   try {
     const here = path.dirname(fileURLToPath(import.meta.url));
@@ -63,7 +63,7 @@ export function showGetStarted(): void {
   const docPath = path.join(globalDocsDir(), "GET_STARTED.md");
   if (!existsSync(docPath)) {
     throw new Error(
-      `GET_STARTED.md not found at ${docPath}. Try reinstalling zerostack-ts.`,
+      `GET_STARTED.md not found at ${docPath}. Try reinstalling tiny-crow.`,
     );
   }
   const result = spawnSync("less", [docPath], { stdio: "inherit" });

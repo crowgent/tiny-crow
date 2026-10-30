@@ -138,8 +138,8 @@ export async function main(): Promise<void> {
   } catch (e) {
     console.error(
       "This error might derive from an incomplete configuration: " +
-        "run `zerostack-ts --setup` to configure your providers and models " +
-        "interactively, or `zerostack-ts --tutor` to see the getting started guide",
+        "run `tiny-crow --setup` to configure your providers and models " +
+        "interactively, or `tiny-crow --tutor` to see the getting started guide",
     );
     throw e;
   }

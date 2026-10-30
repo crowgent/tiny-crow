@@ -31,7 +31,7 @@ class SignalListener {
   }
 
   static bind(name: string): SignalListener {
-    const dir = path.join(os.tmpdir(), `zs_sig_${process.pid}_${name}`);
+    const dir = path.join(os.tmpdir(), `tc_sig_${process.pid}_${name}`);
     fs.rmSync(dir, { recursive: true, force: true });
     fs.mkdirSync(dir, { recursive: true });
     const sockPath = path.join(dir, "status.sock");

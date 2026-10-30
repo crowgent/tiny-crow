@@ -55,7 +55,7 @@ test("test_output_command_returns_output_when_descendant_holds_pipe", async () =
 });
 
 test("test_shell_mode_timeout_kills_descendants", async () => {
-  const marker = path.join(os.tmpdir(), `zerostack-abort-descendant-${process.pid}`);
+  const marker = path.join(os.tmpdir(), `tiny-crow-abort-descendant-${process.pid}`);
   await fs.rm(marker, { force: true });
   const sandbox = new Sandbox(false, "bwrap");
   const command = `sh -c 'sleep 2; printf leaked > ${marker}' & wait`;
@@ -74,7 +74,7 @@ test("test_shell_mode_timeout_kills_descendants", async () => {
 });
 
 test("test_shell_mode_explicit_kill_active_kills_running_descendants", async () => {
-  const marker = path.join(os.tmpdir(), `zerostack-abort-active-descendant-${process.pid}`);
+  const marker = path.join(os.tmpdir(), `tiny-crow-abort-active-descendant-${process.pid}`);
   await fs.rm(marker, { force: true });
   const sandbox = new Sandbox(false, "bwrap");
   const command = `sh -c 'sleep 2; printf leaked > ${marker}' & wait`;

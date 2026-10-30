@@ -35,7 +35,7 @@ test("detect_bogus_binary_returns_none", async () => {
 });
 
 test("detect_and_rewrite_with_working_binary", async () => {
-  const dir = path.join(os.tmpdir(), `zs_rtk_test_${process.pid}`);
+  const dir = path.join(os.tmpdir(), `tc_rtk_test_${process.pid}`);
   fs.mkdirSync(dir, { recursive: true });
   try {
     const p = fakeRtk(dir);

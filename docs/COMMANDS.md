@@ -1,12 +1,12 @@
 ---
-description: "Complete reference of zerostack-ts slash commands, keyboard shortcuts, and input prefixes for the terminal UI."
+description: "Complete reference of tiny-crow slash commands, keyboard shortcuts, and input prefixes for the terminal UI."
 ---
 
-# Slash Commands
+# Command Reference
 
-All slash commands are available from the TUI input prompt.
+Every slash command below is available from the TUI input prompt.
 
-## Session
+## Sessions
 
 | Command | Description |
 | ------- | ----------- |
@@ -16,14 +16,14 @@ All slash commands are available from the TUI input prompt.
 | `/redo` | Restore whatever the most recent `/undo` or `/rewind` removed. |
 | `/rewind` | Open a picker to jump the session back to an earlier point. |
 | `/retry` | Load the last user message into the input editor for editing. |
-| `/quit` | Exit zerostack-ts. |
+| `/quit` | Exit tiny-crow. |
 | `/exit` | Alias for `/quit`. |
 | `/sessions` | List recent saved sessions (up to 20). |
 | `/sessions <id-or-name>` | Load a session by its ID prefix or name. |
 | `/sessions delete <id-or-name>` | Delete a session by its ID prefix or name. |
 | `/rename <name>` | Rename the current session. |
 | `/history` | Show global chat history (last 10 entries across sessions). |
-| `/export [file]` | Export the current session to a standalone HTML page (default `zerostack-ts-session-<id>.html`), or to JSONL when the file ends in `.jsonl`. Included in this build. |
+| `/export [file]` | Export the current session to a standalone HTML page (default `tiny-crow-session-<id>.html`), or to JSONL when the file ends in `.jsonl`. Included in this build. |
 | `/import <file>` | Import a session from a JSONL export (or a native session JSON file), save it, and load it. Included in this build. |
 | `/share` | Upload the HTML export as a secret GitHub gist and print the URL. Requires `GITHUB_TOKEN` or `GH_TOKEN`. Included in this build. |
 | `/queue` | List input queued while the agent is busy (same as `/queue ls`). |
@@ -32,7 +32,7 @@ All slash commands are available from the TUI input prompt.
 | `/welcome` | Show the welcome/onboarding screen. |
 | `/tutorial` | Alias for `/welcome`. |
 
-## Provider & Model
+## Providers and models
 
 | Command | Description |
 | ------- | ----------- |
@@ -44,7 +44,7 @@ All slash commands are available from the TUI input prompt.
 | `/models <name>` | Switch to a named quick model. |
 | `/models-add <name> <provider> <model>` | Save a new quick model to the config file. |
 
-## Context Files
+## Files added to context
 
 | Command | Description |
 | ------- | ----------- |
@@ -53,21 +53,21 @@ All slash commands are available from the TUI input prompt.
 | `/drop <path>` | Remove a file from the agent's context. |
 | `/drop-all` | Remove all added files from the agent's context. |
 
-Files added with `/add` are included alongside the conversation in each request,
-useful for giving the agent reference documentation or code without cluttering
-the chat directly.
+Files added with `/add` are included alongside the conversation in each
+request — useful for giving the agent reference documentation or code
+without cluttering the chat directly.
 
-## Initialization
+## Project setup
 
 | Command | Description |
 | ------- | ----------- |
 | `/init` | Create an AGENTS.md file for the current project by delegating to the agent. |
 | `/init force` | Overwrite the existing AGENTS.md if one already exists. |
 
-Requires a `code` prompt to be configured (run `/regen-prompts` to restore
-built-in prompts, or create a custom `code.md` prompt).
+Requires a `code` prompt to be configured (run `/regen-prompts` to
+restore built-in prompts, or create a custom `code.md` prompt).
 
-## Security
+## Security modes
 
 | Command | Description |
 | ------- | ----------- |
@@ -75,7 +75,7 @@ built-in prompts, or create a custom `code.md` prompt).
 | `/mode standard` | Allow path tools within CWD, ask for external paths. Config rules apply. |
 | `/mode restrictive` | Ask for every operation. Config rules skipped. |
 | `/mode readonly` | Allow reads only; deny writes, edits, bash, and everything else. |
-| `/mode guarded` | Allow reads; ask for writes, edits, bash, and everything else. Config rules apply. |
+| `/mode guarded` | Allow reads; ask for writes, edits, bash, and everything else. |
 | `/mode yolo` | Allow everything; ask for destructive bash commands. Config rules apply. |
 
 Prompts can set the security mode automatically via `%%mode=<mode>` on
@@ -91,12 +91,12 @@ Hooks are available in this build (see [CONFIG.md](CONFIG.md#hooks)).
 | ------- | ----------- |
 | `/hooks` | Show whether a hook dispatcher is installed and, if so, each configured event with its handler count. |
 
-Run `zerostack-ts --hooks-test <tool> [--hooks-test-input <json>]` from the
-shell (not a slash command) to dry-run `PreToolUse` hooks for a tool without
-starting a session or making a model call. See
+Run `tiny-crow --hooks-test <tool> [--hooks-test-input <json>]` from the
+shell (not a slash command) to dry-run `PreToolUse` hooks for a tool
+without starting a session or making a model call. See
 [CONFIG.md](CONFIG.md#hooks) for the full hooks configuration reference.
 
-## Prompts & Themes
+## Prompts and themes
 
 | Command | Description |
 | ------- | ----------- |
@@ -104,12 +104,12 @@ starting a session or making a model call. See
 | `/prompt <name>` | Activate a named prompt. Also applies `%%mode=` from the prompt file if present (see below). |
 | `/prompt default` | Clear the active prompt. |
 
-Prompts may include a `%%mode=<mode>` directive on the **first line** to
-automatically switch the security mode when activated. Valid modes:
+Prompts may include a `%%mode=<mode>` directive on the **first line**
+to automatically switch the security mode when activated. Valid modes:
 `standard`, `restrictive`, `readonly`, `guarded`, `yolo`. Use
 `%%mode=last_user_mode` to restore the mode the user last set via `/mode`
-or startup config. The directive line is stripped from the prompt content
-before it reaches the agent.
+or startup config. The directive line is stripped from the prompt
+content before it reaches the agent.
 
 Example `ask.md`:
 ```markdown
@@ -125,7 +125,7 @@ You are in read-only mode. Only read files and explore.
 | `/regen-prompts` | Restore built-in prompts to the prompts directory. |
 | `/regen-themes` | Restore built-in themes to the themes directory. |
 
-## Conversation
+## Conversation tools
 
 | Command | Description |
 | ------- | ----------- |
@@ -143,7 +143,8 @@ You are in read-only mode. Only read files and explore.
 
 ## Memory (optional subsystem)
 
-Included in this build; memory tools are registered when memory is enabled (see MEMORY.md).
+Included in this build; memory tools are registered when memory is
+enabled (see MEMORY.md).
 
 | Command | Description |
 | ------- | ----------- |
@@ -162,9 +163,10 @@ Included in this build; memory tools are registered when memory is enabled (see 
 | `/memory clear scratchpad` | Clear all scratchpad items. |
 | `/memory clear daily` | Clear all of today's entries. |
 
-Long-term memory (MEMORY.md) and open scratchpad items are automatically injected
-into every request. Daily logs (today + yesterday) are also included. Notes and
-older daily logs are accessible via `/memory read` and `memory_search`.
+Long-term memory (MEMORY.md) and open scratchpad items are automatically
+injected into every request. Daily logs (today + yesterday) are also
+included. Notes and older daily logs are accessible via `/memory read`
+and `memory_search`.
 
 ## MCP (optional subsystem)
 
@@ -200,7 +202,7 @@ Included in this build (see [SUBAGENTS.md](SUBAGENTS.md)).
 | `/models-subagent` | List quick models available for subagents. |
 | `/models-subagent <name>` | Switch subagents to a named quick model. |
 
-## Worktree (optional subsystem)
+## Worktrees (optional subsystem)
 
 | Command | Description |
 | ------- | ----------- |
@@ -208,7 +210,7 @@ Included in this build (see [SUBAGENTS.md](SUBAGENTS.md)).
 | `/wt-merge [branch]` | Merge the worktree branch back into the target branch (local `--squash` merge, no push). The worktree/branch are removed only after the merge is verified; aborts keep everything. |
 | `/wt-exit` | Exit the worktree and return to the main repo. |
 
-## Loop (optional subsystem)
+## Loops (optional subsystem)
 
 | Command | Description |
 | ------- | ----------- |
@@ -216,11 +218,12 @@ Included in this build (see [SUBAGENTS.md](SUBAGENTS.md)).
 | `/loop stop` | Stop the active loop. |
 | `/loop status` | Show current loop status. |
 
-## Shell Commands
+## Running shell commands directly
 
-Prefix a message with `!` to run it as a shell command instead of sending it to
-the agent. The command's output is captured and stored in the session history as
-an Assistant message. Works in both TUI and `--print` mode.
+Prefix a message with `!` to run it as a shell command instead of
+sending it to the agent. The command's output is captured and stored in
+the session history as an Assistant message. Works in both TUI and
+`--print` mode.
 
 | Example | Description |
 | ------- | ----------- |
@@ -229,14 +232,14 @@ an Assistant message. Works in both TUI and `--print` mode.
 | `!npm test` | Run tests and capture the output. |
 | `!` | Empty command shows an error. |
 
-If you want to run a command and then discuss the output with the agent, just
-type `!<command>` first (it stores the output as an Assistant message), then
-follow up with a normal message asking the agent about it.
+If you want to run a command and then discuss the output with the agent,
+just type `!<command>` first (it stores the output as an Assistant
+message), then follow up with a normal message asking the agent about it.
 
-## Prompt Shortcut
+## Prompt shortcuts
 
-Prefix a message with `.` to quickly switch prompts or run a one-shot query with
-a different prompt.
+Prefix a message with `.` to quickly switch prompts or run a one-shot
+query with a different prompt.
 
 | Example | Description |
 | ------- | ----------- |
@@ -244,8 +247,8 @@ a different prompt.
 | `.ask` | Switch to the `ask` prompt (same as `/prompt ask`). |
 | `.plan what files changed?` | Temporarily use the `plan` prompt for this query, then restore the previous prompt and security mode. |
 
-The `.[prompt] [msg]` syntax is a one-shot: it sets the prompt, submits the
-message, and after the response restores the previous prompt and
+The `.[prompt] [msg]` syntax is a one-shot: it sets the prompt, submits
+the message, and after the response restores the previous prompt and
 `last_user_mode`.
 
 ## General

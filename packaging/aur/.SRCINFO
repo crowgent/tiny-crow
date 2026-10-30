@@ -1,4 +1,4 @@
-pkgbase = zerostack-ts
+pkgbase = tiny-crow
 	pkgdesc = Minimal coding agent TUI, ported to TypeScript
 	pkgver = 1.8.5
 	pkgrel = 1
@@ -6,7 +6,7 @@ pkgbase = zerostack-ts
 	license = GPL-3.0-only
 	makedepends = npm
 	depends = nodejs>=24
-	source = zerostack-ts-1.8.5.tar.gz
+	source = tiny-crow-1.8.5.tar.gz
 	sha256sums = SKIP
 
-pkgname = zerostack-ts
+pkgname = tiny-crow

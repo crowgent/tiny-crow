@@ -143,16 +143,16 @@ test("gen: opencode slices drop deprecated and google-native models", () => {
 });
 
 test("sync: rewrites version literals from package.json, then is stable", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "zerostack-ts-sync-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "tiny-crow-sync-"));
   mkdirSync(path.join(root, "src"), { recursive: true });
   mkdirSync(path.join(root, "src", "ui"), { recursive: true });
   writeFileSync(
     path.join(root, "package.json"),
-    JSON.stringify({ name: "zerostack-ts", version: "9.9.9" }),
+    JSON.stringify({ name: "tiny-crow", version: "9.9.9" }),
   );
   writeFileSync(
     path.join(root, "src", "cli.ts"),
-    'export const CLI_NAME = "zerostack-ts";\nexport const CLI_VERSION = "1.8.5";\n',
+    'export const CLI_NAME = "tiny-crow";\nexport const CLI_VERSION = "1.8.5";\n',
   );
   writeFileSync(
     path.join(root, "src", "logging.ts"),
@@ -160,7 +160,7 @@ test("sync: rewrites version literals from package.json, then is stable", () => 
   );
   writeFileSync(
     path.join(root, "src", "ui", "events.ts"),
-    'export const ZEROSTACK_TS_VERSION = "0.1.0";\n',
+    'export const TINY_CROW_VERSION = "0.1.0";\n',
   );
 
   const first = syncVersion(root);
@@ -176,7 +176,7 @@ test("sync: rewrites version literals from package.json, then is stable", () => 
   );
   assert.match(
     readFileSync(path.join(root, "src", "ui", "events.ts"), "utf-8"),
-    /ZEROSTACK_TS_VERSION = "9\.9\.9"/,
+    /TINY_CROW_VERSION = "9\.9\.9"/,
   );
 
   const second = syncVersion(root);
@@ -188,7 +188,7 @@ test("sync: rewrites version literals from package.json, then is stable", () => 
 });
 
 test("sync: check mode reports drift without writing", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "zerostack-ts-sync-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "tiny-crow-sync-"));
   mkdirSync(path.join(root, "src"), { recursive: true });
   mkdirSync(path.join(root, "src", "ui"), { recursive: true });
   writeFileSync(
@@ -198,7 +198,7 @@ test("sync: check mode reports drift without writing", () => {
   for (const [rel, line] of [
     ["src/cli.ts", 'export const CLI_VERSION = "1.0.0";'],
     ["src/logging.ts", 'export const VERSION = "1.0.0";'],
-    ["src/ui/events.ts", 'export const ZEROSTACK_TS_VERSION = "1.0.0";'],
+    ["src/ui/events.ts", 'export const TINY_CROW_VERSION = "1.0.0";'],
   ] as const) {
     writeFileSync(path.join(root, rel), line + "\n");
   }
@@ -218,7 +218,7 @@ test("sync: arg parsing rejects unknown options", () => {
 });
 
 test("sync: missing version constant fails loudly", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "zerostack-ts-sync-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "tiny-crow-sync-"));
   mkdirSync(path.join(root, "src"), { recursive: true });
   mkdirSync(path.join(root, "src", "ui"), { recursive: true });
   writeFileSync(

@@ -234,7 +234,7 @@ test("static_commands_prepopulated", () => {
 let tempCounter = 0;
 
 function withTempDir(f: (root: string) => void): void {
-  const dir = path.join(os.tmpdir(), `zerostack_test_${process.pid}_${tempCounter++}`);
+  const dir = path.join(os.tmpdir(), `tiny-crow_test_${process.pid}_${tempCounter++}`);
   fs.mkdirSync(dir, { recursive: true });
   const canonical = fs.realpathSync(dir);
   try {

@@ -26,7 +26,7 @@ function handler(command: string): HookHandler {
 let counter = 0;
 function uniquePath(name: string): string {
   counter += 1;
-  return join(tmpdir(), `zerostack-hooks-trust-${name}-${process.pid}-${Date.now()}-${counter}`);
+  return join(tmpdir(), `tiny-crow-hooks-trust-${name}-${process.pid}-${Date.now()}-${counter}`);
 }
 
 function writeSettings(path: string, json: string): void {

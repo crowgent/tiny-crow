@@ -61,7 +61,7 @@ function maskingSandbox(root: string): Sandbox {
 }
 
 test("test_exit_zero_never_hints_even_when_masked_path_is_mentioned", () => {
-  const root = path.join(os.tmpdir(), `zerostack-hint-${process.pid}`, ".ssh");
+  const root = path.join(os.tmpdir(), `tiny-crow-hint-${process.pid}`, ".ssh");
   fs.mkdirSync(root, { recursive: true });
   try {
     const sandbox = maskingSandbox(root);
@@ -78,12 +78,12 @@ test("test_exit_zero_never_hints_even_when_masked_path_is_mentioned", () => {
       `the hint should name the masked root and route the decision to the user: ${hint}`,
     );
   } finally {
-    fs.rmSync(path.join(os.tmpdir(), `zerostack-hint-${process.pid}`), { recursive: true, force: true });
+    fs.rmSync(path.join(os.tmpdir(), `tiny-crow-hint-${process.pid}`), { recursive: true, force: true });
   }
 });
 
 test("test_unsandboxed_command_never_hints", () => {
-  const root = path.join(os.tmpdir(), `zerostack-hint-bare-${process.pid}`, ".ssh");
+  const root = path.join(os.tmpdir(), `tiny-crow-hint-bare-${process.pid}`, ".ssh");
   fs.mkdirSync(root, { recursive: true });
   try {
     const sandbox = new Sandbox(true, "bwrap")
@@ -96,6 +96,6 @@ test("test_unsandboxed_command_never_hints", () => {
       "a command that ran unsandboxed read the real file, so a mask hint would be a lie",
     );
   } finally {
-    fs.rmSync(path.join(os.tmpdir(), `zerostack-hint-bare-${process.pid}`), { recursive: true, force: true });
+    fs.rmSync(path.join(os.tmpdir(), `tiny-crow-hint-bare-${process.pid}`), { recursive: true, force: true });
   }
 });

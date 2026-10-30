@@ -89,7 +89,7 @@ test("connect_times_out_on_unresponsive_server", async () => {
 });
 
 test("connect_retries_failed_attempts", async () => {
-  const dir = path.join(os.tmpdir(), `zerostack-mcp-retry-${process.pid}`);
+  const dir = path.join(os.tmpdir(), `tiny-crow-mcp-retry-${process.pid}`);
   fs.mkdirSync(dir, { recursive: true });
   const marker = path.join(dir, "attempts");
   fs.rmSync(marker, { force: true });
@@ -104,7 +104,7 @@ test("connect_retries_failed_attempts", async () => {
 });
 
 test("connect_retries_zero_means_single_attempt", async () => {
-  const dir = path.join(os.tmpdir(), `zerostack-mcp-noretry-${process.pid}`);
+  const dir = path.join(os.tmpdir(), `tiny-crow-mcp-noretry-${process.pid}`);
   fs.mkdirSync(dir, { recursive: true });
   const marker = path.join(dir, "attempts");
   fs.rmSync(marker, { force: true });

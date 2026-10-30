@@ -41,7 +41,7 @@ function configWith(event: string, matcher: string | null, handlers: HookHandler
 }
 
 function marker(name: string): string {
-  return join(tmpdir(), `zerostack-hooks-${name}-${process.pid}`);
+  return join(tmpdir(), `tiny-crow-hooks-${name}-${process.pid}`);
 }
 
 test("invalid_regex_matcher_fails_at_load_time", () => {
@@ -57,7 +57,7 @@ test("wildcard_matcher_matches_every_tool", () => {
 });
 
 test("name_list_matcher_matches_after_normalization", () => {
-  // "Edit|Write" is CC-style names; the model calls zerostack's "write" tool.
+  // "Edit|Write" is CC-style names; the model calls tiny-crow's "write" tool.
   const config = configWith("PreToolUse", "Edit|Write", [handler("true")]);
   const dispatcher = HookDispatcher.fromConfig(config);
   assert.notEqual(dispatcher.handlersFor("PreToolUse", "write").length, 0);

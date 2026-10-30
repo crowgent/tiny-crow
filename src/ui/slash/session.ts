@@ -114,7 +114,7 @@ function sessionToHtml(session: SessionLike): string {
   const rows = session.messages
     .map((m) => `<div class="msg ${escapeHtml(String(m.role))}">${escapeHtml(m.content)}</div>`)
     .join("\n");
-  return `<!DOCTYPE html>\n<html><head><meta charset="utf-8"><title>${escapeHtml(session.name || "zerostack-ts session")}</title></head><body>\n${rows}\n</body></html>\n`;
+  return `<!DOCTYPE html>\n<html><head><meta charset="utf-8"><title>${escapeHtml(session.name || "tiny-crow session")}</title></head><body>\n${rows}\n</body></html>\n`;
 }
 
 function sessionToJsonl(session: SessionLike): string {
@@ -123,7 +123,7 @@ function sessionToJsonl(session: SessionLike): string {
 
 async function handleExport(parts: string[], ctx: SlashCtx): Promise<void> {
   const idPrefix = ctx.session.id.slice(0, 8);
-  const defaultName = `zerostack-ts-session-${idPrefix}.html`;
+  const defaultName = `tiny-crow-session-${idPrefix}.html`;
   const filePath = parts[1]?.trim() !== undefined && parts[1].trim() !== ""
     ? parts[1].trim()
     : defaultName;
@@ -211,11 +211,11 @@ async function handleImport(parts: string[], ctx: SlashCtx): Promise<void> {
 
 async function handleShare(ctx: SlashCtx): Promise<void> {
   const idPrefix = ctx.session.id.slice(0, 8);
-  const filename = `zerostack-ts-session-${idPrefix}.html`;
+  const filename = `tiny-crow-session-${idPrefix}.html`;
   const html = ctx.exportToHtml?.(ctx.session) ?? sessionToHtml(ctx.session);
   const description = ctx.session.name === ""
-    ? "zerostack-ts session"
-    : `zerostack-ts session: ${ctx.session.name}`;
+    ? "tiny-crow session"
+    : `tiny-crow session: ${ctx.session.name}`;
   if (ctx.shareGist === undefined) {
     writeError(ctx.renderer, "share failed: gist sharing not wired");
     return;

@@ -1588,12 +1588,12 @@ export class Engine {
         return { kind: "done" };
       }
       case "/export": {
-        const defaultName = `zerostack-session-${this.session.id.slice(0, 8)}.html`;
+        const defaultName = `tiny-crow-session-${this.session.id.slice(0, 8)}.html`;
         const path = parts[1]?.trim() !== "" && parts[1] ? parts[1].trim() : defaultName;
         try {
           const content = path.endsWith(".jsonl")
             ? this.session.messages.map((m) => JSON.stringify(m)).join("\n")
-            : `<html><body><h1>zerostack session</h1></body></html>`;
+            : `<html><body><h1>tiny-crow session</h1></body></html>`;
           writeFileSync(path, content, "utf8");
           sink.writeOk(`exported ${path.endsWith(".jsonl") ? "JSONL" : "HTML"} to ${path}`);
         } catch (e) {

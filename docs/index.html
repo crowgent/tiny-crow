@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#141512">
-<title>zerostack-ts — minimal coding agent</title>
+<title>tiny-crow — minimal coding agent</title>
 <meta name="description" content="Minimal AI coding agent for the terminal, written in TypeScript. Sandboxed execution, granular permissions, MCP support, session rewind; ready for your workflow">
 <meta property="og:type" content="website">
-<meta property="og:title" content="zerostack-ts — minimal coding agent">
+<meta property="og:title" content="tiny-crow — minimal coding agent">
 <meta property="og:description" content="Minimal AI coding agent for the terminal, written in TypeScript. Sandboxed execution, granular permissions, MCP support, session rewind; ready for your workflow">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="zerostack-ts — minimal coding agent">
+<meta name="twitter:title" content="tiny-crow — minimal coding agent">
 <meta name="twitter:description" content="Minimal AI coding agent for the terminal, written in TypeScript. Sandboxed execution, granular permissions, MCP support, session rewind; ready for your workflow">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "name": "zerostack-ts",
+  "name": "tiny-crow",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "Linux, macOS",
   "description": "Minimal AI coding agent for the terminal, written in TypeScript. Sandboxed execution, granular permissions, MCP support, session rewind; ready for your workflow",
@@ -314,14 +314,13 @@ footer p{margin-bottom:6px;font-size:.8rem;color:var(--faint)}
 <div class="topbar" id="topbar">
   <div class="container topbar-inner">
     <a class="brand" href="./">
-      <span>zerostack-ts</span>
+      <span>tiny-crow</span>
     </a>
     <nav>
       <a href="#overview">Overview</a>
       <a href="#docs">Docs</a>
       <a href="#quickstart">Quick Start</a>
       <a href="#docs">Documentation</a>
-      <a href="https://app.element.io/#/room/#zerostack-general:matrix.org" target="_blank" rel="noopener">Matrix</a>
     </nav>
   </div>
 </div>
@@ -329,7 +328,7 @@ footer p{margin-bottom:6px;font-size:.8rem;color:var(--faint)}
 <header class="masthead">
   <div class="container">
     <div class="eyebrow">TypeScript &middot; Terminal &middot; Open Source</div>
-    <h1>zerostack-ts</h1>
+    <h1>tiny-crow</h1>
     <p class="standfirst">Minimal AI coding agent for the terminal, written in TypeScript. Sandboxed execution, granular permissions, MCP support, session rewind; ready for your workflow</p>
     <div class="actions">
       <a class="btn btn-solid" href="#docs">Documentation</a>
@@ -375,7 +374,7 @@ footer p{margin-bottom:6px;font-size:.8rem;color:var(--faint)}
     <h2 class="title"><span class="n">1.</span>Overview</h2>
     <ul class="feat-grid stagger">
       <li><strong>Multi-provider</strong> &mdash; OpenRouter, OpenAI, Anthropic, Gemini, Ollama, plus custom providers</li>
-      <li><strong>Standard tools</strong> &mdash; all tools exposed to coding agents (as described by opencode)</li>
+      <li><strong>Standard tools</strong> &mdash; all tools exposed to coding agents</li>
       <li><strong>Permission system</strong> &mdash; 5 modes, per-tool patterns, session allowlists</li>
       <li><strong>Terminal UI</strong> &mdash; markdown rendering, mouse support, scrollback</li>
       <li><strong>Prompts system</strong> &mdash; 14 built-in prompts, switchable at runtime</li>
@@ -396,7 +395,7 @@ footer p{margin-bottom:6px;font-size:.8rem;color:var(--faint)}
       <li><strong>Status signals</strong> &mdash; run-state and permission-wait events over a Unix socket (<a href="STATUS_SIGNALS.md">docs/STATUS_SIGNALS.md</a>)</li>
     </ul>
     <figure>
-      <figcaption>Figure 1 &mdash; The zerostack-ts terminal interface.</figcaption>
+      <figcaption>Figure 1 &mdash; The tiny-crow terminal interface.</figcaption>
     </figure>
   </section>
 
@@ -420,7 +419,7 @@ footer p{margin-bottom:6px;font-size:.8rem;color:var(--faint)}
         <tr><td><code>write-prompt</code></td><td>Creates and optimizes agent prompts</td></tr>
       </tbody>
     </table>
-    <p>Custom prompts can be created by placing markdown files in <code>$XDG_CONFIG_HOME/zerostack/prompts/</code>.</p>
+    <p>Custom prompts can be created by placing markdown files in <code>$XDG_CONFIG_HOME/tiny-crow/prompts/</code>.</p>
   </section>
 
   <!-- 3 permissions -->
@@ -488,19 +487,19 @@ footer p{margin-bottom:6px;font-size:.8rem;color:var(--faint)}
 export OPENROUTER_API_KEY="[api_key]"
 
 # Interactive session (default prompt: code)
-zerostack-ts
+tiny-crow
 
 # Monochrome TUI
-zerostack-ts --no-color
+tiny-crow --no-color
 
 # One-shot mode
-zerostack-ts -p "Explain this project"
+tiny-crow -p "Explain this project"
 
 # Continue last session
-zerostack-ts -c
+tiny-crow -c
 
 # Explicit provider/model
-zerostack-ts --provider openrouter --model deepseek/deepseek-v4-flash</code></pre>
+tiny-crow --provider openrouter --model deepseek/deepseek-v4-flash</code></pre>
   </section>
 
   <!-- 7 license -->
@@ -515,8 +514,8 @@ zerostack-ts --provider openrouter --model deepseek/deepseek-v4-flash</code></pr
 <footer>
   <div class="rule container"></div>
   <div class="container">
-    <p>zerostack-ts</p>
-    <p>Community &amp; support on <a href="https://app.element.io/#/room/#zerostack-general:matrix.org" target="_blank" rel="noopener">Matrix (#zerostack-general)</a></p>
+    <p>tiny-crow</p>
+    <p>Community &amp; support via the repository issue tracker</p>
   </div>
 </footer>
 

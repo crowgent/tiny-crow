@@ -28,7 +28,7 @@ export function buildShellInvocation(
  * `stdinJson` to its stdin then close it, wait up to `timeoutMs`, and on
  * timeout kill the whole process group. Async handling (run in the
  * background, ignore the decision) is the caller's responsibility.
- * `projectDir` is exposed to the hook as `ZEROSTACK_PROJECT_DIR`.
+ * `projectDir` is exposed to the hook as `TINY_CROW_PROJECT_DIR`.
  */
 export function runHook(
   command: string,
@@ -42,7 +42,7 @@ export function runHook(
     let child;
     try {
       child = spawn(program, argv, {
-        env: { ...process.env, ZEROSTACK_PROJECT_DIR: projectDir },
+        env: { ...process.env, TINY_CROW_PROJECT_DIR: projectDir },
         stdio: ["pipe", "pipe", "pipe"],
         detached: process.platform !== "win32",
       });

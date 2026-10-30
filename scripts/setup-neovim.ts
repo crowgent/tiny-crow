@@ -1,14 +1,14 @@
-// Configure Neovim with CodeCompanion.nvim + zerostack-ts ACP.
+// Configure Neovim with CodeCompanion.nvim + tiny-crow ACP.
 //
 // Usage:
 //   node scripts/setup-neovim.ts
 //
-//   # Skip the zerostack-ts install check:
-//   node scripts/setup-neovim.ts --skip-zerostack
+//   # Skip the tiny-crow install check:
+//   node scripts/setup-neovim.ts --skip-tiny-crow
 //
 // Steps, mirroring the original shell setup:
 //   1. Require neovim >= 0.9 and git on PATH.
-//   2. Unless skipped, require a zerostack-ts command whose --help lists
+//   2. Unless skipped, require a tiny-crow command whose --help lists
 //      --acp (warn, don't fail, when the command exists without ACP).
 //   3. Create the neovim config dirs.
 //   4. Bootstrap lazy.nvim: if no lazy-lock.json exists, warn when an
@@ -30,30 +30,30 @@ import { execFileSync } from "node:child_process";
 import * as readline from "node:readline";
 
 export const REQUIRED_NVIM = "0.9";
-export const AGENT_COMMAND = "zerostack-ts";
+export const AGENT_COMMAND = "tiny-crow";
 
 export interface SetupArgs {
-  skipZerostack: boolean;
+  skipTinyCrow: boolean;
   help: boolean;
 }
 
 export function parseSetupArgs(argv: string[]): SetupArgs {
-  let skipZerostack = false;
+  let skipTinyCrow = false;
   let help = false;
   for (const arg of argv) {
-    if (arg === "--skip-zerostack") skipZerostack = true;
+    if (arg === "--skip-tiny-crow") skipTinyCrow = true;
     else if (arg === "--help" || arg === "-h") help = true;
     else throw new Error(`Unknown option: ${arg}`);
   }
-  return { skipZerostack, help };
+  return { skipTinyCrow, help };
 }
 
 export function printSetupHelp(): void {
   console.log(
-    "Usage: node scripts/setup-neovim.ts [--skip-zerostack]\n" +
+    "Usage: node scripts/setup-neovim.ts [--skip-tiny-crow]\n" +
       "\n" +
       "Options:\n" +
-      "  --skip-zerostack   Skip the zerostack-ts installation check\n" +
+      "  --skip-tiny-crow   Skip the tiny-crow installation check\n" +
       "  --help, -h         Show this message",
   );
 }
@@ -148,10 +148,10 @@ export const CODECOMPANION_CONTENT = `return {
                     opts = {
                         show_presets = false,
                     },
-                    zerostack = function()
+                    tiny_crow = function()
                         return {
-                            name = "zerostack-ts",
-                            formatted_name = "Zerostack",
+                            name = "tiny-crow",
+                            formatted_name = "Tiny Crow",
                             type = "acp",
                             roles = {
                                 llm = "assistant",
@@ -162,7 +162,7 @@ export const CODECOMPANION_CONTENT = `return {
                             },
                             commands = {
                                 default = {
-                                    "zerostack-ts",
+                                    "tiny-crow",
                                     "--acp",
                                 },
                             },
@@ -199,7 +199,7 @@ export const CODECOMPANION_CONTENT = `return {
             },
             interactions = {
                 chat = {
-                    adapter = "zerostack-ts",
+                    adapter = "tiny-crow",
                 },
             },
             display = {
@@ -223,7 +223,7 @@ export function checkAgentCommand(): void {
         `WARNING: This ${AGENT_COMMAND} build does not include ACP support.`,
       );
       console.error(
-        `  Install a build with ACP support, or run with --skip-zerostack.`,
+        `  Install a build with ACP support, or run with --skip-tiny-crow.`,
       );
     }
   } else {
@@ -232,7 +232,7 @@ export function checkAgentCommand(): void {
       `  Install this project first (see README: link src/main.ts into a`,
     );
     console.error(`  directory on PATH, e.g. ~/.local/bin), or run with`);
-    console.error(`  --skip-zerostack to skip this check.`);
+    console.error(`  --skip-tiny-crow to skip this check.`);
     throw new Error(`${AGENT_COMMAND} not found in PATH`);
   }
 }
@@ -268,7 +268,7 @@ export async function runSetupNeovim(
   const ccFile = path.join(ccDir, "codecompanion.lua");
   const initFile = path.join(nvimConfigDir, "init.lua");
 
-  console.log("=== zerostack-ts + Neovim ACP Setup ===");
+  console.log("=== tiny-crow + Neovim ACP Setup ===");
 
   // 1. Check neovim.
   if (!commandExists("nvim")) {
@@ -290,7 +290,7 @@ export async function runSetupNeovim(
   }
 
   // 3. Check the agent command.
-  if (!args.skipZerostack) {
+  if (!args.skipTinyCrow) {
     checkAgentCommand();
   }
 
@@ -350,12 +350,12 @@ export async function runSetupNeovim(
   console.log("Next steps:");
   console.log("  1. Launch neovim and let lazy.nvim install plugins");
   console.log("  2. Open a chat with: <leader>cc (default: \\cc)");
-  console.log("  3. Select the 'zerostack-ts' adapter in the chat buffer");
+  console.log("  3. Select the 'tiny-crow' adapter in the chat buffer");
   console.log("");
-  console.log("Ensure zerostack-ts is installed with ACP support.");
+  console.log("Ensure tiny-crow is installed with ACP support.");
   console.log("");
   console.log("You also need a provider configured (API keys, model, etc.).");
-  console.log("See: zerostack-ts --help");
+  console.log("See: tiny-crow --help");
 }
 
 const isMain =

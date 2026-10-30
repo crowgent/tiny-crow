@@ -1,7 +1,7 @@
 // Status signals over a Unix socket: start/stop, blocked/state lines.
 import { createConnection } from "node:net";
 
-/** Reasons zerostack-ts can be blocked waiting on something external. */
+/** Reasons tiny-crow can be blocked waiting on something external. */
 export type BlockedReason = "permission";
 
 export function blockedReasonLine(reason: BlockedReason): string {

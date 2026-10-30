@@ -1,4 +1,4 @@
-# Justfile for the zerostack-ts port (Node 24, no build step).
+# Justfile for the tiny-crow port (Node 24, no build step).
 # https://github.com/casey/just
 #
 # Every recipe below runs node, npm, git, or plain shell only. This port
@@ -46,11 +46,11 @@ test:
 
 # ---- Scripts ----
 
-# Regenerate data/models.json + data/opencode-transports.json.
+# Regenerate data/models.json + data/tiny-crow-transports.json.
 gen-models-catalog:
     node scripts/gen-models-catalog.ts
 
-# Configure Neovim with CodeCompanion.nvim + zerostack-ts ACP.
+# Configure Neovim with CodeCompanion.nvim + tiny-crow ACP.
 setup-neovim:
     node scripts/setup-neovim.ts
 
@@ -58,7 +58,7 @@ setup-neovim:
 sync-version:
     node scripts/sync-version.ts
 
-# Install a `zerostack-ts` launcher onto PATH (see scripts/install.ts).
+# Install a `tiny-crow` launcher onto PATH (see scripts/install.ts).
 install:
     node scripts/install.ts
 

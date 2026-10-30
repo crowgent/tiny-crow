@@ -1,10 +1,10 @@
 { mkShell
 , nodejs_24
-, zerostackTs
+, tinyCrowTs
 }:
 
 mkShell {
-  inputsFrom = [ zerostackTs ];
+  inputsFrom = [ tinyCrowTs ];
 
   buildInputs = [
     nodejs_24

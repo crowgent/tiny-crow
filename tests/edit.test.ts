@@ -8,7 +8,7 @@ import { EditTool } from "../src/agent/tools/edit.ts";
 
 let counter = 0;
 async function tempFile(name: string, content: string): Promise<string> {
-  const p = path.join(os.tmpdir(), `zerostack_test_${name}_${process.pid}_${counter++}`);
+  const p = path.join(os.tmpdir(), `tiny-crow_test_${name}_${process.pid}_${counter++}`);
   await fs.writeFile(p, content);
   return p;
 }

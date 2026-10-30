@@ -1,13 +1,14 @@
-# AGENTS.md — zerostack-ts
+# AGENTS.md — tiny-crow
 
-TypeScript port of the zerostack coding agent. Node.js 24 or newer runs
-the sources directly with type stripping — there is no build step.
+Tiny Crow is a coding agent written in TypeScript. Node.js 24 or newer
+executes the sources directly with type stripping — there is no build
+step to run first.
 
-When working on zerostack-ts:
+When working on tiny-crow:
 
 - Never claim a change works without running `npm test` and
   `npm run typecheck` (`tsc --noEmit`) first.
-- Run `npm test` if you want to check all unit tests.
+- Run `npm test` to check all unit tests.
 - Run `npm start` (or `node src/main.ts`) to run the agent; use
   `npm run dev` for watch mode during development.
 

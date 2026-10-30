@@ -20,9 +20,9 @@ import {
 } from "../src/extras/loop/transcript.ts";
 
 function loopTestDataDir(): string {
-  const dir = path.join(os.tmpdir(), `zerostack-loop-tests-${process.pid}`);
+  const dir = path.join(os.tmpdir(), `tiny-crow-loop-tests-${process.pid}`);
   fs.mkdirSync(dir, { recursive: true });
-  process.env.ZS_DATA_DIR = dir;
+  process.env.TC_DATA_DIR = dir;
   return dir;
 }
 
@@ -106,13 +106,13 @@ test("test_summary_truncation_constant", () => {
 });
 
 test("test_plan_exists_on_nonexistent", () => {
-  const tmp = path.join(os.tmpdir(), "zerostack_test_plan_nonexistent.md");
+  const tmp = path.join(os.tmpdir(), "tiny-crow_test_plan_nonexistent.md");
   fs.rmSync(tmp, { force: true });
   assert.ok(!planExists(tmp));
 });
 
 test("test_plan_exists_on_existing", () => {
-  const tmp = path.join(os.tmpdir(), "zerostack_test_plan_exists.md");
+  const tmp = path.join(os.tmpdir(), "tiny-crow_test_plan_exists.md");
   try {
     fs.writeFileSync(tmp, "# Test plan");
     assert.ok(planExists(tmp));
@@ -122,7 +122,7 @@ test("test_plan_exists_on_existing", () => {
 });
 
 test("test_read_plan_returns_content", () => {
-  const tmp = path.join(os.tmpdir(), "zerostack_test_read_plan.md");
+  const tmp = path.join(os.tmpdir(), "tiny-crow_test_read_plan.md");
   try {
     fs.writeFileSync(tmp, "item 1\nitem 2");
     assert.equal(readPlan(tmp), "item 1\nitem 2");
@@ -132,13 +132,13 @@ test("test_read_plan_returns_content", () => {
 });
 
 test("test_read_plan_nonexistent_returns_none", () => {
-  const tmp = path.join(os.tmpdir(), "zerostack_test_read_nonexistent.md");
+  const tmp = path.join(os.tmpdir(), "tiny-crow_test_read_nonexistent.md");
   fs.rmSync(tmp, { force: true });
   assert.equal(readPlan(tmp), null);
 });
 
 test("test_delete_plan_removes_file", () => {
-  const tmp = path.join(os.tmpdir(), "zerostack_test_delete_plan.md");
+  const tmp = path.join(os.tmpdir(), "tiny-crow_test_delete_plan.md");
   fs.writeFileSync(tmp, "data");
   assert.ok(fs.existsSync(tmp));
   deletePlan(tmp);
@@ -146,25 +146,25 @@ test("test_delete_plan_removes_file", () => {
 });
 
 test("test_delete_plan_nonexistent_does_not_panic", () => {
-  const tmp = path.join(os.tmpdir(), "zerostack_test_delete_nonexistent.md");
+  const tmp = path.join(os.tmpdir(), "tiny-crow_test_delete_nonexistent.md");
   fs.rmSync(tmp, { force: true });
   deletePlan(tmp);
 });
 
 test("test_handle_startup_no_plan_returns_false", async () => {
-  const tmp = path.join(os.tmpdir(), "zerostack_test_startup_nonexistent.md");
+  const tmp = path.join(os.tmpdir(), "tiny-crow_test_startup_nonexistent.md");
   fs.rmSync(tmp, { force: true });
   assert.ok(!(await handleStartup(tmp)));
 });
 
 test("test_transcript_dir_contains_session_id", () => {
-  const dir = transcriptDir("test-session-123", "/tmp/zerostack-data");
+  const dir = transcriptDir("test-session-123", "/tmp/tiny-crow-data");
   assert.ok(dir.endsWith("test-session-123"));
   assert.ok(dir.includes(path.join("loops", "test-session-123")));
 });
 
 test("test_save_iteration_creates_file", () => {
-  const prev = process.env.ZS_DATA_DIR;
+  const prev = process.env.TC_DATA_DIR;
   const base = loopTestDataDir();
   const sessionId = "test-save-iteration";
   const dir = path.join(base, "loops", sessionId);
@@ -181,13 +181,13 @@ test("test_save_iteration_creates_file", () => {
     assert.ok(content.includes('"iteration": 1'));
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
-    if (prev === undefined) delete process.env.ZS_DATA_DIR;
-    else process.env.ZS_DATA_DIR = prev;
+    if (prev === undefined) delete process.env.TC_DATA_DIR;
+    else process.env.TC_DATA_DIR = prev;
   }
 });
 
 test("test_save_iteration_without_validation_output", () => {
-  const prev = process.env.ZS_DATA_DIR;
+  const prev = process.env.TC_DATA_DIR;
   const base = loopTestDataDir();
   const sessionId = "test-save-no-validation";
   const dir = path.join(base, "loops", sessionId);
@@ -199,7 +199,7 @@ test("test_save_iteration_without_validation_output", () => {
     assert.ok(content.includes('"validationOutput": null'));
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
-    if (prev === undefined) delete process.env.ZS_DATA_DIR;
-    else process.env.ZS_DATA_DIR = prev;
+    if (prev === undefined) delete process.env.TC_DATA_DIR;
+    else process.env.TC_DATA_DIR = prev;
   }
 });

@@ -18,9 +18,9 @@ function homeFallback(): string {
   return process.env["HOME"] ?? ".";
 }
 
-/** Data dir: `$ZS_DATA_DIR` wins, else the OS data dir, else `$HOME`, suffixed with `zerostack`. */
+/** Data dir: `$TC_DATA_DIR` wins, else the OS data dir, else `$HOME`, suffixed with `tiny-crow`. */
 export function dataDir(): string {
-  const override = process.env["ZS_DATA_DIR"];
+  const override = process.env["TC_DATA_DIR"];
   if (override !== undefined) return expandTilde(override);
   const base =
     process.platform === "darwin"
@@ -28,7 +28,7 @@ export function dataDir(): string {
       : process.platform === "win32"
         ? process.env["APPDATA"] ?? homeFallback()
         : process.env["XDG_DATA_HOME"] ?? path.join(homedir(), ".local", "share");
-  return path.join(base || homeFallback(), "zerostack");
+  return path.join(base || homeFallback(), "tiny-crow");
 }
 
 function sessionDir(): string {
@@ -40,7 +40,7 @@ export function toolOutputDir(sessionId: string): string {
 }
 
 function configPath(): string {
-  const override = process.env["ZS_CONFIG_DIR"];
+  const override = process.env["TC_CONFIG_DIR"];
   if (override !== undefined) return expandTilde(override);
   return dataDir();
 }

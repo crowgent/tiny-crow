@@ -55,16 +55,16 @@ test("expand_env_passthrough", () => {
 });
 
 test("expand_env_reads_var", () => {
-  process.env.ZS_TEST_HDR = "secret-value";
+  process.env.TC_TEST_HDR = "secret-value";
   try {
-    assert.equal(expandEnv("${ZS_TEST_HDR}"), "secret-value");
+    assert.equal(expandEnv("${TC_TEST_HDR}"), "secret-value");
   } finally {
-    delete process.env.ZS_TEST_HDR;
+    delete process.env.TC_TEST_HDR;
   }
 });
 
 test("expand_env_missing_var_errors", () => {
-  assert.throws(() => expandEnv("${ZS_DEFINITELY_NOT_SET_98237}"));
+  assert.throws(() => expandEnv("${TC_DEFINITELY_NOT_SET_98237}"));
 });
 
 function model(id: string, kind: string | null): ModelEntry {

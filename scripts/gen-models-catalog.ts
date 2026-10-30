@@ -1,5 +1,5 @@
 // Regenerates data/models.json — the static model catalog baked into the
-// TS port (see src/models_catalog.ts) — and data/opencode-transports.json —
+// TS port (see src/models_catalog.ts) — and data/tiny-crow-transports.json —
 // the per-model transport map for the OpenCode Zen/Go gateways (see the
 // transport handling in src/provider.ts). Source: https://models.dev/api.json,
 // which lists every provider's model ids.
@@ -47,7 +47,7 @@ export const OPENROUTER_VENDORS: readonly string[] = [
 //     line that the API rejects. 2025-04-01 drops those and keeps the
 //     newer line plus aliases.
 //   openai/gemini/openrouter — ZERO stale ids found, so NO cutoff: a
-//     cutoff would only delete still-valid models. Keys are by zerostack
+//     cutoff would only delete still-valid models. Keys are by tiny-crow
 //     provider name; "0000-00-00" = keep all.
 // This is a heuristic snapshot — the authoritative list is always the
 // provider's live API, reachable via `/models refresh`. Re-tune when a
@@ -275,7 +275,7 @@ export function writeCatalogFiles(
 ): { modelsPath: string; transportsPath: string } {
   mkdirSync(outDir, { recursive: true });
   const modelsPath = path.join(outDir, "models.json");
-  const transportsPath = path.join(outDir, "opencode-transports.json");
+  const transportsPath = path.join(outDir, "tiny-crow-transports.json");
   writeFileSync(modelsPath, JSON.stringify(catalog, null, 2) + "\n");
   writeFileSync(transportsPath, JSON.stringify(transports, null, 2) + "\n");
   return { modelsPath, transportsPath };

@@ -34,7 +34,7 @@ import type { WtReturn } from "../src/ui/state.ts";
 let counter = 0;
 
 function uniqueDir(tag: string): string {
-  return path.join(os.tmpdir(), `zs_wt_${tag}_${process.pid}_${counter++}_${tag}`);
+  return path.join(os.tmpdir(), `tc_wt_${tag}_${process.pid}_${counter++}_${tag}`);
 }
 
 function uniqueName(tag: string): string {

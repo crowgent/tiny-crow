@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install zerostack-ts (thin wrapper around scripts/install.ts).
+# Install tiny-crow (thin wrapper around scripts/install.ts).
 #
 # Usage:
 #   bash install.sh [--dir <path>]

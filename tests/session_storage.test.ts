@@ -20,18 +20,18 @@ import {
   suffixPath,
 } from "../src/session/storage.ts";
 
-/** Runs `fn` with ZS_DATA_DIR pointed at a fresh temp dir, then cleans up. */
+/** Runs `fn` with TC_DATA_DIR pointed at a fresh temp dir, then cleans up. */
 function withTestEnv(fn: (dir: string) => void): void {
-  const prev = process.env.ZS_DATA_DIR;
-  const dir = path.join(os.tmpdir(), `zs_test_${process.pid}_${Math.random().toString(36).slice(2)}`);
+  const prev = process.env.TC_DATA_DIR;
+  const dir = path.join(os.tmpdir(), `tc_test_${process.pid}_${Math.random().toString(36).slice(2)}`);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(path.join(dir, "sessions"), { recursive: true });
-  process.env.ZS_DATA_DIR = dir;
+  process.env.TC_DATA_DIR = dir;
   try {
     fn(dir);
   } finally {
-    if (prev === undefined) delete process.env.ZS_DATA_DIR;
-    else process.env.ZS_DATA_DIR = prev;
+    if (prev === undefined) delete process.env.TC_DATA_DIR;
+    else process.env.TC_DATA_DIR = prev;
     fs.rmSync(dir, { recursive: true, force: true });
   }
 }
@@ -145,11 +145,11 @@ test("long_tool_result_is_saved_and_truncated_in_session", () => {
 });
 
 test("long_tool_result_save_failure_keeps_full_output", () => {
-  const prev = process.env.ZS_DATA_DIR;
-  const filePath = path.join(os.tmpdir(), `zs_data_file_${process.pid}`);
+  const prev = process.env.TC_DATA_DIR;
+  const filePath = path.join(os.tmpdir(), `tc_data_file_${process.pid}`);
   fs.rmSync(filePath, { force: true });
   fs.writeFileSync(filePath, "not a directory");
-  process.env.ZS_DATA_DIR = filePath;
+  process.env.TC_DATA_DIR = filePath;
   try {
     const s = Session.create("anthropic", "claude", 200000, "");
     const output = "x".repeat(TOOL_RESULT_SAVE_THRESHOLD + 1);
@@ -158,8 +158,8 @@ test("long_tool_result_save_failure_keeps_full_output", () => {
     assert.ok(content.includes(output));
     assert.ok(content.includes("failed to save long tool output separately"));
   } finally {
-    if (prev === undefined) delete process.env.ZS_DATA_DIR;
-    else process.env.ZS_DATA_DIR = prev;
+    if (prev === undefined) delete process.env.TC_DATA_DIR;
+    else process.env.TC_DATA_DIR = prev;
     fs.rmSync(filePath, { force: true });
   }
 });
@@ -351,15 +351,15 @@ test("save_session_preserves_cost_fields", () => {
 });
 
 test("find_sessions_by_prefix_empty_for_nonexistent_dir", () => {
-  const prev = process.env.ZS_DATA_DIR;
-  const dir = path.join(os.tmpdir(), `zs_nodir_${process.pid}`);
+  const prev = process.env.TC_DATA_DIR;
+  const dir = path.join(os.tmpdir(), `tc_nodir_${process.pid}`);
   fs.rmSync(dir, { recursive: true, force: true });
-  process.env.ZS_DATA_DIR = dir;
+  process.env.TC_DATA_DIR = dir;
   try {
     assert.deepEqual(findSessionsByPrefix("anything"), []);
   } finally {
-    if (prev === undefined) delete process.env.ZS_DATA_DIR;
-    else process.env.ZS_DATA_DIR = prev;
+    if (prev === undefined) delete process.env.TC_DATA_DIR;
+    else process.env.TC_DATA_DIR = prev;
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
@@ -409,7 +409,7 @@ test("load_suffix_returns_content_when_file_has_text", () => {
 
 test("suffix_path_is_inside_config_dir", () => {
   withTestEnv(() => {
-    // With no ZS_CONFIG_DIR override, the config dir is the data dir.
+    // With no TC_CONFIG_DIR override, the config dir is the data dir.
     assert.equal(suffixPath(), path.join(dataDir(), "SUFFIX.md"));
   });
 });

@@ -56,7 +56,7 @@ test("load_attachment_file_not_found", () => {
 test("load_attachment_unknown_media_type", () => {
   // The Rust test reads the repo's own Cargo.toml; the TS port has none,
   // so use a temp file with an unknown extension instead.
-  const p = path.join(os.tmpdir(), `zerostack_test_unknown_${process.pid}.toml`);
+  const p = path.join(os.tmpdir(), `tiny-crow_test_unknown_${process.pid}.toml`);
   try {
     fs.writeFileSync(p, "[package]\n");
     assert.throws(() => loadAttachment(p), /unknown media type/);
@@ -66,7 +66,7 @@ test("load_attachment_unknown_media_type", () => {
 });
 
 test("load_attachment_success_for_small_media", () => {
-  const p = path.join(os.tmpdir(), "zerostack_test_media.png");
+  const p = path.join(os.tmpdir(), "tiny-crow_test_media.png");
   try {
     fs.writeFileSync(p, "fake png data");
     const att = loadAttachment(p);

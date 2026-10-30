@@ -10,7 +10,7 @@ function dir(name: string): string {
 }
 
 function cwdScratchDir(name: string): string {
-  return path.join(process.cwd(), "target", `zerostack-mask-${name}-${process.pid}`);
+  return path.join(process.cwd(), "target", `tiny-crow-mask-${name}-${process.pid}`);
 }
 
 function mountsAt(args: string[], dst: string): [number, string][] {

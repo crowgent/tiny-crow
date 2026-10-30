@@ -7,7 +7,7 @@ import * as path from "node:path";
 import { StatusSignals } from "../src/extras/status_signals.ts";
 
 function tempSocketPath(name: string): { dir: string; socketPath: string } {
-  const dir = path.join(os.tmpdir(), `zs_status_test_${process.pid}_${name}`);
+  const dir = path.join(os.tmpdir(), `tc_status_test_${process.pid}_${name}`);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
   return { dir, socketPath: path.join(dir, "status.sock") };

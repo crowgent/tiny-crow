@@ -65,35 +65,35 @@ test("custom_mcp_no_flags_leaves_config_untouched", () => {
 });
 
 test("prompts_dir_flag_is_repeatable_and_ordered", () => {
-  const prev = process.env["ZS_PROMPTS_DIR"];
-  delete process.env["ZS_PROMPTS_DIR"];
+  const prev = process.env["TC_PROMPTS_DIR"];
+  delete process.env["TC_PROMPTS_DIR"];
   try {
     const cli = cliWith(["--prompts-dir", "a", "--prompts-dir", "b"]);
     assert.deepEqual(resolvePromptsDirs(cli), ["a", "b"]);
   } finally {
-    if (prev !== undefined) process.env["ZS_PROMPTS_DIR"] = prev;
+    if (prev !== undefined) process.env["TC_PROMPTS_DIR"] = prev;
   }
 });
 
 test("prompts_dir_env_appends_after_flags", () => {
-  const prev = process.env["ZS_PROMPTS_DIR"];
-  process.env["ZS_PROMPTS_DIR"] = "env-a:env-b";
+  const prev = process.env["TC_PROMPTS_DIR"];
+  process.env["TC_PROMPTS_DIR"] = "env-a:env-b";
   try {
     const cli = cliWith(["--prompts-dir", "flag"]);
     assert.deepEqual(resolvePromptsDirs(cli), ["flag", "env-a", "env-b"]);
   } finally {
-    if (prev !== undefined) process.env["ZS_PROMPTS_DIR"] = prev;
-    else delete process.env["ZS_PROMPTS_DIR"];
+    if (prev !== undefined) process.env["TC_PROMPTS_DIR"] = prev;
+    else delete process.env["TC_PROMPTS_DIR"];
   }
 });
 
 test("prompts_dir_empty_by_default", () => {
-  const prev = process.env["ZS_PROMPTS_DIR"];
-  delete process.env["ZS_PROMPTS_DIR"];
+  const prev = process.env["TC_PROMPTS_DIR"];
+  delete process.env["TC_PROMPTS_DIR"];
   try {
     const cli = cliWith([]);
     assert.deepEqual(resolvePromptsDirs(cli), []);
   } finally {
-    if (prev !== undefined) process.env["ZS_PROMPTS_DIR"] = prev;
+    if (prev !== undefined) process.env["TC_PROMPTS_DIR"] = prev;
   }
 });

@@ -1,3 +1,3 @@
 final: prev: {
-  zerostack-ts = final.callPackage ../package/zerostack.nix { };
+  tiny-crow = final.callPackage ../package/tiny-crow.nix { };
 }

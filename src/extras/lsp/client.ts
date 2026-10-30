@@ -291,7 +291,7 @@ export class LspClient {
         },
       },
       initializationOptions: cfg.initialization ?? null,
-      clientInfo: { name: "zerostack-ts", version: "1.0.5" },
+      clientInfo: { name: "tiny-crow", version: "1.0.5" },
     };
     const init = await client.request("initialize", initParams, INIT_TIMEOUT_MS);
     if (init === null) {

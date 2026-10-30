@@ -15,7 +15,7 @@ let
   };
 in
 {
-  inherit (pkgs) zerostack-ts;
-  default = pkgs.zerostack-ts;
-  shell = pkgs.zerostack-ts-dev-shell;
+  inherit (pkgs) tiny-crow;
+  default = pkgs.tiny-crow;
+  shell = pkgs.tiny-crow-dev-shell;
 }

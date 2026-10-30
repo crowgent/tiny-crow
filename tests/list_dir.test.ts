@@ -27,7 +27,7 @@ for (const [name, bytes, expected] of sizeCases) {
 
 let counter = 0;
 async function tempDir(tag: string): Promise<string> {
-  const dir = path.join(os.tmpdir(), `zs_${tag}_${process.pid}_${counter++}`);
+  const dir = path.join(os.tmpdir(), `tc_${tag}_${process.pid}_${counter++}`);
   await fs.rm(dir, { recursive: true, force: true });
   await fs.mkdir(dir, { recursive: true });
   return dir;

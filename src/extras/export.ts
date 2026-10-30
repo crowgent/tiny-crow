@@ -21,7 +21,7 @@ export interface ExportSession {
   totalCost?: number;
 }
 
-export const SESSION_JSONL_FORMAT = "zerostack-session-jsonl";
+export const SESSION_JSONL_FORMAT = "tiny-crow-session-jsonl";
 
 /** Export a session as JSONL: one metadata header line, then one message per line. */
 export function sessionToJsonl(session: ExportSession): string {
@@ -204,13 +204,13 @@ footer { color: #565f89; font-size: 0.75rem; margin-top: 2rem; }
 <main>
 {{messages}}
 </main>
-<footer>exported from zerostack-ts</footer>
+<footer>exported from tiny-crow</footer>
 </body>
 </html>
 `;
 
 function sessionTitle(session: ExportSession): string {
-  if (session.name === "") return `zerostack-ts session ${session.id.slice(0, 8)}`;
+  if (session.name === "") return `tiny-crow session ${session.id.slice(0, 8)}`;
   return session.name;
 }
 
@@ -279,7 +279,7 @@ export async function shareGist(
     response = await fetch("https://api.github.com/gists", {
       method: "POST",
       headers: {
-        "User-Agent": "zerostack-ts",
+        "User-Agent": "tiny-crow",
         Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github+json",
         "Content-Type": "application/json",

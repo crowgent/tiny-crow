@@ -1,10 +1,13 @@
 {
+  "bin": {
+    "tiny-crow": "src/main.ts"
+  },
   "description": "Minimal coding agent TUI, ported to TypeScript on Node.js",
   "engines": {
     "node": ">=24"
   },
   "license": "GPL-3.0",
-  "name": "zerostack-ts",
+  "name": "tiny-crow",
   "scripts": {
     "check": "npm run typecheck",
     "dev": "node --watch src/main.ts",

@@ -7,27 +7,28 @@ assignees: ''
 
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+**What went wrong**
+A clear, concise account of the faulty behaviour.
 
-**To Reproduce**
-Steps to reproduce the behavior:
+**Steps to reproduce**
 1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+2. Run '....'
+3. See error
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+**What you expected instead**
+A clear, concise description of the behaviour you expected.
 
 **Screenshots**
-If applicable, add screenshots to help explain your problem.
+If applicable, add screenshots to help explain the problem.
 
-**Operating System used**
+**Operating system**
 Insert here.
 
-**LLM Provider and Model used**
+**LLM provider and model**
 Insert here.
 
-**Additional context**
+**Version**
+Run `tiny-crow --version` and paste the output here.
+
+**Anything else**
 Add any other context about the problem here.

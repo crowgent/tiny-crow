@@ -283,7 +283,7 @@ export function renderSetupLines(ctx: SetupCtx): string[] {
 
 function renderMainMenuLines(ctx: SetupCtx): string[] {
   const lines: string[] = [];
-  lines.push(centered("ZEROSTACK-TS SETUP", ctx.cols));
+  lines.push(centered("TINY-CROW SETUP", ctx.cols));
   lines.push("");
   lines.push(hline(ctx.cols));
   lines.push("");

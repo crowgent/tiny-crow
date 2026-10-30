@@ -11,7 +11,7 @@ function dir(name: string): string {
 
 test("test_essential_env_excludes_ssh_agent_vars_even_when_set", () => {
   const env = new Map([
-    ["SSH_AUTH_SOCK", "/tmp/zerostack-test-agent.sock"],
+    ["SSH_AUTH_SOCK", "/tmp/tiny-crow-test-agent.sock"],
     ["SSH_AGENT_PID", "12345"],
     ["PATH", "/usr/bin:/bin"],
   ]);

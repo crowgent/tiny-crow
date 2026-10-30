@@ -19,10 +19,10 @@ cd "${APP_DIR}"
 npm install
 npm run typecheck
 
-mkdir -p "${PREFIX}/share/zerostack-ts" "${PREFIX}/bin"
-cp -r src data package.json package-lock.json node_modules README.md LICENSE "${PREFIX}/share/zerostack-ts/"
-cat > "${PREFIX}/bin/zerostack-ts" <<'EOF'
+mkdir -p "${PREFIX}/share/tiny-crow" "${PREFIX}/bin"
+cp -r src data package.json package-lock.json node_modules README.md LICENSE "${PREFIX}/share/tiny-crow/"
+cat > "${PREFIX}/bin/tiny-crow" <<'EOF'
 #!/bin/sh
-exec node "$(dirname "$0")/../share/zerostack-ts/src/main.ts" "$@"
+exec node "$(dirname "$0")/../share/tiny-crow/src/main.ts" "$@"
 EOF
-chmod +x "${PREFIX}/bin/zerostack-ts"
+chmod +x "${PREFIX}/bin/tiny-crow"

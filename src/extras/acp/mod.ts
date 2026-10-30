@@ -26,7 +26,7 @@ import {
 } from "../../provider.ts";
 import type { AcpServerConfig } from "./config.ts";
 
-export const AGENT_NAME = "zerostack-ts";
+export const AGENT_NAME = "tiny-crow";
 export const AGENT_VERSION = "1.0.5";
 export const DEFAULT_ACP_TCP_PORT = 7243;
 

@@ -1,13 +1,13 @@
 ---
-description: "Configure LLM providers in zerostack-ts: OpenRouter, OpenAI-compatible endpoints, Anthropic, Gemini, Ollama, custom headers, and prompt caching."
+description: "Configure LLM providers in tiny-crow: OpenRouter, OpenAI-compatible endpoints, Anthropic, Gemini, Ollama, custom headers, and prompt caching."
 ---
 
 # Providers
 
-zerostack-ts supports seven built-in providers and allows custom provider
-definitions for OpenAI-compatible endpoints.
+Tiny Crow ships with seven built-in providers, and you can define
+custom providers for any OpenAI-compatible endpoint.
 
-## Built-in Providers
+## Built-in providers
 
 | Provider     | Config name     | Default env var for API key |
 | ------------ | --------------- | --------------------------- |
@@ -19,20 +19,20 @@ definitions for OpenAI-compatible endpoints.
 | OpenCode Zen | `opencode-zen`  | `OPENCODE_API_KEY` (optional — without a key only the free models work) |
 | OpenCode Go  | `opencode-go`   | `OPENCODE_API_KEY`          |
 
-Select a provider via the config file, the `--provider` CLI flag, or the
-`ZS_PROVIDER` environment variable:
+Pick a provider in the config file, with the `--provider` CLI flag, or
+with the `TC_PROVIDER` environment variable:
 
 ```
-zerostack-ts --provider anthropic
+tiny-crow --provider anthropic
 ```
 
-The model is set with `--model` or `ZS_MODEL`:
+Set the model with `--model` or `TC_MODEL`:
 
 ```
-zerostack-ts --provider openai --model gpt-4o
+tiny-crow --provider openai --model gpt-4o
 ```
 
-## Provider Recipes
+## Provider recipes
 
 - [API Route](providers/ApiRoute.md)
 - [Cheaper Inference](providers/CheaperInference.md)
@@ -40,11 +40,11 @@ zerostack-ts --provider openai --model gpt-4o
 - [OpenCode Zen / Go](providers/OpencodeZenGo.md)
 - [Opper](providers/Opper.md)
 
-## Custom Providers
+## Defining a custom provider
 
-Custom providers let you point zerostack-ts at any OpenAI-compatible API (vLLM,
-LiteLLM, Ollama, local models, enterprise gateways, etc.). Define them under
-the `custom_providers` key in the config file:
+Custom providers point tiny-crow at any OpenAI-compatible API (vLLM,
+LiteLLM, Ollama, local models, enterprise gateways, etc.). Define them
+under the `custom_providers` key in the config file:
 
 ```json
 {
@@ -73,19 +73,20 @@ the `custom_providers` key in the config file:
 | `headers`                     | object  | Optional. HTTP headers to include in every request. Values support `${ENV_VAR}` expansion.                                                                                    |
 | `danger_accept_invalid_certs` | boolean | Optional. Disables TLS certificate verification (MITM risk — use with care).                                                                                                  |
 | `timeout_secs`                | integer | Optional. Whole-request deadline in seconds; it covers the streamed reply, so leave it unset unless a gateway needs one. Unset: completions have no deadline (5s connect cap, request fails after 300s of silence) and `GET /models` requests are capped at 8s per attempt. Like `headers`, applies to `provider_type: openai` only. |
-| `model`                       | string  | Optional. Default model name for this provider. Used when no model is specified via `--model` or `ZS_MODEL`.                                                                  |
+| `model`                       | string  | Optional. Default model name for this provider. Used when no model is specified via `--model` or `TC_MODEL`.                                                                  |
 
-### Live context window and pricing
+### Context window and pricing, discovered live
 
-For custom providers, zerostack-ts reads the context window and token pricing
-live from `GET {base_url}/models` when the endpoint reports OpenRouter-style
-`context_length` / `pricing` fields (pricing may be strings, as on OpenRouter,
-or plain numbers). This drives the statusline context meter, auto-compaction,
-and cost tracking. Providers whose listing omits these fields fall back to
-`128000`; set `context_window` in the config (or per quick model) to override —
-config values always win over live discovery.
+For custom providers, tiny-crow reads the context window and token
+pricing live from `GET {base_url}/models` when the endpoint reports
+OpenRouter-style `context_length` / `pricing` fields (pricing may be
+strings, as on OpenRouter, or plain numbers). This drives the statusline
+context meter, auto-compaction, and cost tracking. Providers whose
+listing omits these fields fall back to `128000`; set `context_window`
+in the config (or per quick model) to override — config values always
+win over live discovery.
 
-### Header variable expansion
+### Expanding variables in headers
 
 Header values can reference environment variables with `${VAR}` syntax:
 
@@ -104,7 +105,7 @@ Header values can reference environment variables with `${VAR}` syntax:
 }
 ```
 
-## API Key Resolution
+## How an API key is found
 
 The API key is resolved in this priority order:
 
@@ -114,7 +115,7 @@ The API key is resolved in this priority order:
 3. **Config file** `api_keys` map — keyed by provider slug or custom provider name
 4. **Ollama** — returns an empty string (no key required)
 
-### Config-level API keys
+### Keys in the config file
 
 ```json
 {
@@ -125,7 +126,7 @@ The API key is resolved in this priority order:
 }
 ```
 
-## OpenAI API Styles
+## The two OpenAI transports
 
 The OpenAI provider supports two API transports:
 
@@ -136,35 +137,41 @@ The OpenAI provider supports two API transports:
   endpoint.
 
 Override with `api_style: "responses"` or `api_style: "completions"` on a
-custom provider, or set `api_style` on the built-in OpenAI provider to force a
-specific transport.
+custom provider, or set `api_style` on the built-in OpenAI provider to force
+a specific transport.
 
 ## Prompt caching
 
-zerostack-ts enables prompt caching automatically where the underlying provider client supports it. The behavior depends on which provider backs the model you choose.
+Tiny Crow enables prompt caching automatically where the underlying
+provider client supports it. Behaviour depends on which provider backs
+the model you choose.
 
-### Automatic — no zerostack-ts action
+### Automatic — nothing for you to do
 
 These providers cache server-side without any markers in the request:
 
 - **OpenAI** — automatic above ~1024 tokens, 50% discount on cached input.
 - **Google Gemini 2.5+** — implicit caching, 75% discount.
 - **DeepSeek** — automatic, persistent across days, ~90% discount.
-- **xAI / Grok** — automatic, 75% discount; benefits from setting an `x-grok-conv-id` header which zerostack-ts does not currently send.
+- **xAI / Grok** — automatic, 75% discount; benefits from setting an `x-grok-conv-id` header which tiny-crow does not currently send.
 - **Moonshot, Groq (Kimi K2)** — automatic.
 
-For these providers, zerostack-ts passes through to the provider client without additional configuration.
+For these providers, tiny-crow passes through to the provider client
+without additional configuration.
 
-### Explicitly enabled by zerostack-ts
+### Switched on by tiny-crow
 
-These providers require `cache_control` markers; zerostack-ts adds them via prompt-caching support in the provider client:
+These providers require `cache_control` markers; tiny-crow adds them via
+prompt-caching support in the provider client:
 
 - **Anthropic (direct API)** — marks system prompt, the final tool definition, and the last message. All three breakpoints contribute to cumulative savings as the conversation grows.
-- **Claude via OpenRouter** — marks the system prompt only. Anthropic's caching is prefix-based, so the tools array in front of the system block is also captured. For `anthropic/*` model IDs, zerostack-ts also pins `provider.order = ["Anthropic"]` with `allow_fallbacks: true`, because Bedrock and Vertex AI silently drop `cache_control` markers.
+- **Claude via OpenRouter** — marks the system prompt only. Anthropic's caching is prefix-based, so the tools array in front of the system block is also captured. For `anthropic/*` model IDs, tiny-crow also pins `provider.order = ["Anthropic"]` with `allow_fallbacks: true`, because Bedrock and Vertex AI silently drop `cache_control` markers.
 
-### Empirical impact
+### What that saved in practice
 
-Measured on Sonnet 4.6, second turn of a tool-heavy session (grep + read across the zerostack-ts repo, ~6k-token system prompt including AGENTS.md and ARCHITECTURE.md):
+Measured on Sonnet 4.6, second turn of a tool-heavy session (grep + read
+across the tiny-crow repo, ~6k-token system prompt including AGENTS.md
+and ARCHITECTURE.md):
 
 | Configuration               | turn 2 cost | reduction |
 | --------------------------- | ----------: | --------: |
@@ -172,24 +179,34 @@ Measured on Sonnet 4.6, second turn of a tool-heavy session (grep + read across 
 | Anthropic + caching         |      $0.024 |      -87% |
 | OpenRouter Claude + caching |      $0.026 |      -86% |
 
-Projected monthly cost at 50 such turns per working day: $204 (baseline) → $26 (Anthropic direct) or $29 (OpenRouter Claude). The two cached paths are within ~$3/month of each other.
+Projected monthly cost at 50 such turns per working day: $204 (baseline)
+→ $26 (Anthropic direct) or $29 (OpenRouter Claude). The two cached paths
+are within ~$3/month of each other.
 
-### Known limitation: OpenRouter does not mark the last message
+### A known OpenRouter limitation: the last message is not marked
 
-OpenRouter's `apply_prompt_caching` marks the system message only. The Anthropic provider also marks the last message, which means accumulated tool results from earlier turns continue to be cached as the conversation grows; OpenRouter does not mark this position.
+OpenRouter's `apply_prompt_caching` marks the system message only. The
+Anthropic provider also marks the last message, which means accumulated
+tool results from earlier turns continue to be cached as the
+conversation grows; OpenRouter does not mark this position.
 
-On tool-heavy workloads this manifests as ~2,676 tokens running at full input rate on OpenRouter vs ~4 tokens on Anthropic direct, a gap of ~8% per turn. The bulk of savings comes from caching the system prompt and tools — both paths capture that.
+On tool-heavy workloads this manifests as ~2,676 tokens running at full
+input rate on OpenRouter vs ~4 tokens on Anthropic direct, a gap of ~8%
+per turn. The bulk of savings comes from caching the system prompt and
+tools — both paths capture that.
 
-This is an upstream provider limitation, not zerostack-ts-specific.
+This is an upstream provider limitation, not tiny-crow-specific.
 
-**Recommendation:** if you happen to have both API keys, Anthropic direct is marginally cheaper. If you don't, OpenRouter Claude with caching captures most of the savings.
+**Recommendation:** if you happen to have both API keys, Anthropic direct
+is marginally cheaper. If you don't, OpenRouter Claude with caching
+captures most of the savings.
 
-## CLI Flags
+## CLI flags
 
 | Flag                | Env var       | Description                         |
 | ------------------- | ------------- | ----------------------------------- |
-| `--provider`        | `ZS_PROVIDER` | Provider name                       |
-| `--model`           | `ZS_MODEL`    | Model name                          |
+| `--provider`        | `TC_PROVIDER` | Provider name                       |
+| `--model`           | `TC_MODEL`    | Model name                          |
 | `--quick-model`     | —             | Use a named quick model from config |
 | `--api-key`         | —             | API key (visible in `ps`)           |
 | `--max-tokens`      | —             | Maximum response tokens             |

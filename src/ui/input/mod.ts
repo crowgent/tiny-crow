@@ -363,7 +363,7 @@ export class InputEditor {
   openInEditor(): void {
     const editor =
       this.editor ?? process.env.EDITOR ?? "editor";
-    const tmp = path.join(os.tmpdir(), `zerostack-ts-${process.pid}.md`);
+    const tmp = path.join(os.tmpdir(), `tiny-crow-${process.pid}.md`);
     try {
       fs.writeFileSync(tmp, this.buffer);
     } catch {

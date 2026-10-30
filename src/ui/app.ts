@@ -392,7 +392,7 @@ export class SimpleInputEditor implements InputEditorLike {
     const editor = this.editorCmd ?? process.env["EDITOR"] ?? "vi";
     const tmpFile = join(
       process.env["TMPDIR"] ?? "/tmp",
-      `zerostack-ts-input-${process.pid}.txt`,
+      `tiny-crow-input-${process.pid}.txt`,
     );
     try {
       writeFileSync(tmpFile, this.buffer);
@@ -537,7 +537,7 @@ export class App {
     this.cachedModelIdsFn = opts.cachedModelIds;
     this.dataDir =
       opts.dataDir ??
-      join(process.env["XDG_DATA_HOME"] ?? join(homedir(), ".local", "share"), "zerostack-ts");
+      join(process.env["XDG_DATA_HOME"] ?? join(homedir(), ".local", "share"), "tiny-crow");
     this.headless = opts.headlessBackend !== undefined && opts.headlessBackend !== null;
   }
 
@@ -603,7 +603,7 @@ export class App {
 
     renderSession(renderer, ui.session, ui.cli, ui.cfg, ui.context);
     const dataDir =
-      opts.dataDir ?? join(process.env["XDG_DATA_HOME"] ?? join(homedir(), ".local", "share"), "zerostack-ts");
+      opts.dataDir ?? join(process.env["XDG_DATA_HOME"] ?? join(homedir(), ".local", "share"), "tiny-crow");
     const markerPath = join(dataDir, "shown_welcome_msg");
     if (resolveAlwaysShowWelcome(ui.cfg) || !existsSync(markerPath)) {
       showWelcome(renderer, !ui.cli.disableLazygit);

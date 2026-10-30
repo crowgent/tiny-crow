@@ -54,12 +54,12 @@ class FakeAgent implements AnyAgent {
 }
 
 function isolateDataDirs(): { dir: string; prevData: string | undefined; prevConfig: string | undefined } {
-  const dir = path.join(os.tmpdir(), `zerostack-tui-loop-tests-${process.pid}`);
+  const dir = path.join(os.tmpdir(), `tiny-crow-tui-loop-tests-${process.pid}`);
   fs.mkdirSync(dir, { recursive: true });
-  const prevData = process.env.ZS_DATA_DIR;
-  const prevConfig = process.env.ZS_CONFIG_DIR;
-  process.env.ZS_DATA_DIR = dir;
-  process.env.ZS_CONFIG_DIR = dir;
+  const prevData = process.env.TC_DATA_DIR;
+  const prevConfig = process.env.TC_CONFIG_DIR;
+  process.env.TC_DATA_DIR = dir;
+  process.env.TC_CONFIG_DIR = dir;
   return { dir, prevData, prevConfig };
 }
 
@@ -87,10 +87,10 @@ const slashHandler: SlashHandler = async (text, ctx) => {
 };
 
 function restoreEnv(saved: { prevData: string | undefined; prevConfig: string | undefined }): void {
-  if (saved.prevData === undefined) delete process.env.ZS_DATA_DIR;
-  else process.env.ZS_DATA_DIR = saved.prevData;
-  if (saved.prevConfig === undefined) delete process.env.ZS_CONFIG_DIR;
-  else process.env.ZS_CONFIG_DIR = saved.prevConfig;
+  if (saved.prevData === undefined) delete process.env.TC_DATA_DIR;
+  else process.env.TC_DATA_DIR = saved.prevData;
+  if (saved.prevConfig === undefined) delete process.env.TC_CONFIG_DIR;
+  else process.env.TC_CONFIG_DIR = saved.prevConfig;
 }
 
 async function headlessApp(turns: string[][]): Promise<{ app: App; agent: FakeAgent; saved: ReturnType<typeof isolateDataDirs> }> {
@@ -272,7 +272,7 @@ test("slash_clear_resets_session_and_feed", async () => {
     await stepUntil(app, (a) => a.session().messages.length === 0 && !a.feedText().includes("hi there"));
     assert.equal(app.session().messages.length, 0);
     const feed = app.feedText();
-    assert.ok(feed.includes("zerostack"), `cleared feed should show the fresh welcome block: ${feed}`);
+    assert.ok(feed.includes("tiny-crow"), `cleared feed should show the fresh welcome block: ${feed}`);
   } finally {
     await app.teardown();
     restoreEnv(saved);

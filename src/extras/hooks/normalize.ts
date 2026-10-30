@@ -15,8 +15,8 @@ function toSnakeCase(name: string): string {
 }
 
 /**
- * Canonicalize a tool name into zerostack-ts's own name, accepting either
- * zerostack-ts's own name or the equivalent external name. Case handling
+ * Canonicalize a tool name into tiny-crow's own name, accepting either
+ * tiny-crow's own name or the equivalent external name. Case handling
  * is via snake-casing and the mapping is idempotent: already-canonical
  * names pass through unchanged.
  */

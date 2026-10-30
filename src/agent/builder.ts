@@ -98,7 +98,7 @@ export function dynamicTool<TArgs>(tool: Tool<TArgs, string>): DynamicTool {
 }
 
 export function loadSuffix(): string | undefined {
-  const fromEnv = process.env.ZEROSTACK_SUFFIX_FILE;
+  const fromEnv = process.env.TINY_CROW_SUFFIX_FILE;
   if (fromEnv) {
     try {
       const text = readFileSync(fromEnv, "utf8");

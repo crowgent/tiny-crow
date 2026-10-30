@@ -1,7 +1,7 @@
 name: Update model catalog
 
 # Refreshes the embedded static model catalog (data/models.json) and the
-# OpenCode transport map (data/opencode-transports.json) from models.dev on a
+# OpenCode transport map (data/tiny-crow-transports.json) from models.dev on a
 # schedule. The committed JSON stays the single build-time source of truth, so
 # this only opens a PR when models.dev actually changes — builds remain
 # offline and reproducible. See scripts/gen-models-catalog.ts.
@@ -41,7 +41,7 @@ jobs:
           title: 'chore: refresh model catalog from models.dev'
           body: |
             Automated refresh of `data/models.json` and
-            `data/opencode-transports.json` from https://models.dev/api.json
+            `data/tiny-crow-transports.json` from https://models.dev/api.json
             via `scripts/gen-models-catalog.ts`.
 
             Review the diff for unexpected additions/removals before merging.
@@ -49,4 +49,4 @@ jobs:
           delete-branch: true
           add-paths: |
             data/models.json
-            data/opencode-transports.json
+            data/tiny-crow-transports.json

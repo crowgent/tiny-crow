@@ -56,7 +56,7 @@ test("sandbox_expose_display_multi_value", () => {
 });
 
 test("sandbox_expose_display_omits_rejected_values", () => {
-  const home = path.join(os.tmpdir(), `zerostack-print-config-expose-${process.pid}`);
+  const home = path.join(os.tmpdir(), `tiny-crow-print-config-expose-${process.pid}`);
   const ssh = path.join(home, ".ssh");
   const raw = ["~/.ssh", "/etc"];
   const [valid, rejected] = partitionExpose(raw, [ssh], home);
@@ -66,7 +66,7 @@ test("sandbox_expose_display_omits_rejected_values", () => {
 });
 
 test("sandbox_expose_display_all_rejected_renders_none", () => {
-  const home = path.join(os.tmpdir(), `zerostack-print-config-expose-none-${process.pid}`);
+  const home = path.join(os.tmpdir(), `tiny-crow-print-config-expose-none-${process.pid}`);
   const ssh = path.join(home, ".ssh");
   const raw = ["/etc"];
   const [valid] = partitionExpose(raw, [ssh], home);

@@ -21,14 +21,14 @@ test("test_resolve_log_path_verbose", () => {
   const cli = parseCli(["-v"]);
   const logPath = resolveLogPath(cli);
   assert.ok(logPath !== undefined);
-  assert.ok(logPath.includes("zerostack-"));
+  assert.ok(logPath.includes("tiny-crow-"));
   assert.ok(logPath.endsWith(".log"));
   assert.ok(logPath.includes(String(process.pid)));
 });
 
 test("test_resolve_log_path_cli_override", () => {
-  const cli = parseCli(["--log-file", "/tmp/test-zerostack.log"]);
-  assert.equal(resolveLogPath(cli), "/tmp/test-zerostack.log");
+  const cli = parseCli(["--log-file", "/tmp/test-tiny-crow.log"]);
+  assert.equal(resolveLogPath(cli), "/tmp/test-tiny-crow.log");
 });
 
 test("test_resolve_log_path_cli_overrides_verbose", () => {
@@ -67,8 +67,8 @@ test("test_verbose_flag_long_form", () => {
 test("test_crash_log_path_format", () => {
   const s = resolveCrashLogPath();
   assert.ok(s.includes("crashes"));
-  // The TS binary names its crash files zerostack-ts-crash- (Rust: zerostack-crash-).
-  assert.ok(s.includes("zerostack-ts-crash-"));
+  // The binary names its crash files tiny-crow-crash-.
+  assert.ok(s.includes("tiny-crow-crash-"));
   assert.ok(s.endsWith(".log"));
   assert.ok(s.includes(String(process.pid)));
 });

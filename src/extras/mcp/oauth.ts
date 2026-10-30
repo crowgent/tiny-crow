@@ -15,14 +15,14 @@ import { createServer } from "node:http";
 import { join } from "node:path";
 import { oauthRedirectPort, oauthRedirectUri, type OAuthSettings } from "./config.ts";
 
-export const MCP_OAUTH_CLIENT_NAME = "zerostack-ts";
+export const MCP_OAUTH_CLIENT_NAME = "tiny-crow";
 
 export function oauthDataDir(): string {
-  const override = process.env["ZEROSTACK_TS_DATA_DIR"];
+  const override = process.env["TINY_CROW_DATA_DIR"];
   if (override) return join(override, "mcp-oauth");
   const xdg = process.env["XDG_DATA_HOME"];
   const base = xdg ?? join(process.env["HOME"] ?? "~", ".local", "share");
-  return join(base, "zerostack-ts", "mcp-oauth");
+  return join(base, "tiny-crow", "mcp-oauth");
 }
 
 /** Sanitize a server name into a single safe filename component. */
@@ -387,7 +387,7 @@ export function percentDecode(s: string): string {
 }
 
 export function callbackSuccessHtml(): string {
-  return "<html><body><h3>zerostack-ts: authorization complete.</h3>You can close this tab and return to the terminal.</body></html>";
+  return "<html><body><h3>tiny-crow: authorization complete.</h3>You can close this tab and return to the terminal.</body></html>";
 }
 
 /** One-shot loopback listener for the OAuth redirect. */

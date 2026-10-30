@@ -78,6 +78,6 @@ test("html_contains_session_metadata", () => {
 test("html_title_falls_back_to_session_id", () => {
   const session = Session.create("p", "m", 128000, "");
   const html = sessionToHtml(session as never);
-  // TS title is "zerostack-ts session <id>" (Rust: "zerostack session <id>").
-  assert.ok(html.includes("zerostack-ts session"), `unnamed sessions get an id-based title: ${html}`);
+  // Unnamed sessions get a "tiny-crow session <id>" title.
+  assert.ok(html.includes("tiny-crow session"), `unnamed sessions get an id-based title: ${html}`);
 });

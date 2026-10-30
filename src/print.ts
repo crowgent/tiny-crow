@@ -151,10 +151,10 @@ export function printSessions(sessions?: SessionLike[]): void {
 }
 
 export function printConfig(cli: Cli, cfg: Config): void {
-  // storage config_path returns ZS_CONFIG_DIR or data_dir; the print table
+  // storage config_path returns TC_CONFIG_DIR or data_dir; the print table
   // in the original shows that value, not the config file's directory.
-  const configDirDisplay = process.env["ZS_CONFIG_DIR"]
-    ? process.env["ZS_CONFIG_DIR"]
+  const configDirDisplay = process.env["TC_CONFIG_DIR"]
+    ? process.env["TC_CONFIG_DIR"]
     : dataDir();
   const sessionsDir = path.join(dataDir(), "sessions");
   const configFile = configFilePath();

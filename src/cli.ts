@@ -14,7 +14,7 @@ import {
 import { parseEditSystem, type EditSystem } from "./config/types.ts";
 import { defaultModelForProvider } from "./provider.ts";
 
-export const CLI_NAME = "zerostack-ts";
+export const CLI_NAME = "tiny-crow";
 export const CLI_VERSION = "1.8.5";
 export const CLI_ABOUT = "Minimal coding agent";
 
@@ -344,11 +344,11 @@ export function parseCliArgs(argv: string[]): Cli {
     throw new CliParseError(`the argument '--tools' cannot be used with '--no-tools'`);
   }
   // clap env fallbacks.
-  if (cli.provider === undefined && process.env["ZS_PROVIDER"]) {
-    cli.provider = process.env["ZS_PROVIDER"];
+  if (cli.provider === undefined && process.env["TC_PROVIDER"]) {
+    cli.provider = process.env["TC_PROVIDER"];
   }
-  if (cli.model === undefined && process.env["ZS_MODEL"]) {
-    cli.model = process.env["ZS_MODEL"];
+  if (cli.model === undefined && process.env["TC_MODEL"]) {
+    cli.model = process.env["TC_MODEL"];
   }
   return cli;
 }
@@ -393,8 +393,8 @@ Options:
       --session <ID>               Load session by ID prefix
       --name <NAME>                Name for the session
       --no-session                 Ephemeral mode, do not save
-      --provider <NAME>            API provider [env: ZS_PROVIDER]
-      --model <NAME>               Model name [env: ZS_MODEL]
+      --provider <NAME>            API provider [env: TC_PROVIDER]
+      --model <NAME>               Model name [env: TC_MODEL]
       --quick-model <NAME>         Use a named quick model from config
       --api-key <KEY>              API key for the provider
       --max-tokens <N>             Maximum tokens in response
@@ -514,7 +514,7 @@ export function resolveTools(cli: Cli, cfg: Config): string[] {
 
 export function resolvePromptsDirs(cli: Cli): string[] {
   const dirs = [...cli.promptsDir];
-  const env = process.env["ZS_PROMPTS_DIR"];
+  const env = process.env["TC_PROMPTS_DIR"];
   if (env) {
     dirs.push(...env.split(process.platform === "win32" ? ";" : ":").filter((s) => s.length > 0));
   }

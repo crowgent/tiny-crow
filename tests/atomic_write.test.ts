@@ -9,7 +9,7 @@ let counter = 0;
 async function tempDir(tag: string): Promise<string> {
   const dir = path.join(
     os.tmpdir(),
-    `zerostack_atomic_test_${tag}_${process.pid}_${counter++}`,
+    `tiny-crow_atomic_test_${tag}_${process.pid}_${counter++}`,
   );
   await fs.mkdir(dir, { recursive: true });
   return dir;

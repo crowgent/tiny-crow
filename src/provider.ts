@@ -144,7 +144,7 @@ export function resolveProviderConfig(
     const kind = providerKindFromName(custom.providerType);
     if (!kind) {
       throw new Error(
-        `Unknown provider type: ${custom.providerType}. Run \`zerostack-ts --setup\` to configure providers.`,
+        `Unknown provider type: ${custom.providerType}. Run \`tiny-crow --setup\` to configure providers.`,
       );
     }
     return {
@@ -157,7 +157,7 @@ export function resolveProviderConfig(
   const kind = providerKindFromName(name);
   if (!kind) {
     throw new Error(
-      `Unknown provider: '${name}'. Supported: openrouter, openai, anthropic, gemini, ollama, opencode-zen, opencode-go. Run \`zerostack-ts --setup\` to configure providers.`,
+      `Unknown provider: '${name}'. Supported: openrouter, openai, anthropic, gemini, ollama, opencode-zen, opencode-go. Run \`tiny-crow --setup\` to configure providers.`,
     );
   }
   let baseUrl: string | null = null;
@@ -425,7 +425,7 @@ export interface HttpClientOptions {
 
 export function baseClientOptions(): HttpClientOptions {
   return {
-    userAgent: "zerostack-ts/1.0.5",
+    userAgent: "tiny-crow/1.0.5",
     headers: {},
     timeoutMs: null,
     dangerAcceptInvalidCerts: false,
@@ -533,7 +533,7 @@ export class AuthResolver {
     if (this.providerKind === "ollama") return "";
     if (this.providerKind === "opencode-zen") return "public";
     throw new Error(
-      `No API key found. Set the ${envVar} environment variable, add it to config.api_keys under '${providerKindSlug(this.providerKind)}' or '${this.customProviderName ?? "provider_name"}', pass --api-key, or run \`zerostack-ts --setup\` to configure interactively.`,
+      `No API key found. Set the ${envVar} environment variable, add it to config.api_keys under '${providerKindSlug(this.providerKind)}' or '${this.customProviderName ?? "provider_name"}', pass --api-key, or run \`tiny-crow --setup\` to configure interactively.`,
     );
   }
 

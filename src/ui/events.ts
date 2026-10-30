@@ -10,7 +10,7 @@ import {
 } from "./state.ts";
 
 /** Version string shown in the welcome banner (the TS port's own version; the package slice owns the canonical value). */
-export const ZEROSTACK_TS_VERSION = "1.8.5";
+export const TINY_CROW_VERSION = "1.8.5";
 
 const MONTHS = [
   "Jan",
@@ -109,7 +109,7 @@ export function renderSession(
     const cwdStr = cwdParts[cwdParts.length - 1] ?? ".";
     feed.pushLine(
       BlockStyle.Welcome,
-      `[>] zerostack-ts ${ZEROSTACK_TS_VERSION} | ${resolveModel(cli, cfg)} | ${cwdStr}`,
+      `[>] tiny-crow ${TINY_CROW_VERSION} | ${resolveModel(cli, cfg)} | ${cwdStr}`,
     );
     feed.pushLine(BlockStyle.Welcome, "──────────────────────────────────────────────────");
     feed.pushLine(BlockStyle.Welcome, "Ready to code; type a request or '/' for commands");
@@ -155,7 +155,7 @@ function renderToolResultToFeed(feed: Feed, content: string, cfg: Config): void 
 export function showWelcome(renderer: Renderer, showLazygit: boolean): void {
   const feed = renderer.feedMut();
   feed.pushLine(BlockStyle.Welcome, "──────────────────────────────────────────");
-  feed.pushLine(BlockStyle.Welcome, "  zerostack-ts Quickstart");
+  feed.pushLine(BlockStyle.Welcome, "  tiny-crow Quickstart");
   feed.pushLine(BlockStyle.Welcome, "──────────────────────────────────────────");
   feed.pushLine(BlockStyle.Plain, "");
   feed.pushLine(BlockStyle.Tool, "  Pickers:");

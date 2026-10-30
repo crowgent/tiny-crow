@@ -277,7 +277,7 @@ test("yaml_round_trips_scalar_and_nested_fields", () => {
 });
 
 test("config_candidate_priority_toml_yaml_yml_legacy_json", () => {
-  const dir = path.join(os.tmpdir(), `zs_cfgtest_${process.pid}`);
+  const dir = path.join(os.tmpdir(), `tc_cfgtest_${process.pid}`);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
   try {
@@ -300,11 +300,11 @@ test("config_candidate_priority_toml_yaml_yml_legacy_json", () => {
 });
 
 test("save_config_round_trips_and_leaves_no_tmp", async () => {
-  const dir = path.join(os.tmpdir(), `zs_savecfg_${process.pid}`);
+  const dir = path.join(os.tmpdir(), `tc_savecfg_${process.pid}`);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
-  const prev = process.env.ZS_CONFIG_DIR;
-  process.env.ZS_CONFIG_DIR = dir;
+  const prev = process.env.TC_CONFIG_DIR;
+  process.env.TC_CONFIG_DIR = dir;
   try {
     const cfg = defaultConfig();
     cfg.provider = "openai";
@@ -318,8 +318,8 @@ test("save_config_round_trips_and_leaves_no_tmp", async () => {
     assert.equal(back.provider, cfg.provider);
     assert.deepEqual(back.apiKeys, cfg.apiKeys);
   } finally {
-    if (prev === undefined) delete process.env.ZS_CONFIG_DIR;
-    else process.env.ZS_CONFIG_DIR = prev;
+    if (prev === undefined) delete process.env.TC_CONFIG_DIR;
+    else process.env.TC_CONFIG_DIR = prev;
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });

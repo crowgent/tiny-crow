@@ -23,7 +23,7 @@ export const DOC_FILES: Array<[string, string]> = [
 
 export function globalDocsDir(ctx?: SlashCtx): string {
   if (ctx?.docsDir !== undefined) return ctx.docsDir;
-  return path.join(os.homedir(), ".local", "share", "zerostack-ts", "docs");
+  return path.join(os.homedir(), ".local", "share", "tiny-crow", "docs");
 }
 
 function listDocs(ctx: SlashCtx, withSlashPrefix: boolean): void {

@@ -1,26 +1,27 @@
 ---
-description: "Use Opper models with zerostack-ts through an OpenAI-compatible custom provider."
+description: "Use Opper models with tiny-crow through an OpenAI-compatible custom provider."
 ---
 
 # Opper
 
-Opper is an EU-hosted AI gateway with 700+ models from 50+ providers behind one
-OpenAI-compatible API. It is available in zerostack-ts through custom provider
-definitions. The configuration below keeps the API protocol explicit while
-sharing a single `OPPER_API_KEY` environment variable.
+Opper is an EU-hosted AI gateway with 700+ models from 50+ providers
+behind one OpenAI-compatible API. It is available in tiny-crow through
+custom provider definitions. The configuration below keeps the API
+protocol explicit while sharing a single `OPPER_API_KEY` environment
+variable.
 
-## Credentials
+## Your API key
 
-Create an API key at https://platform.opper.ai and set it in your shell instead
-of storing it in the zerostack-ts config:
+Create a key at https://platform.opper.ai and set it in your shell
+rather than storing it in the tiny-crow config:
 
 ```bash
 export OPPER_API_KEY="your-api-key"
 ```
 
-## Provider Routes
+## The two routes
 
-Add the routes you need to `~/.config/zerostack/config.toml`:
+Add the routes you need to `~/.config/tiny-crow/config.toml`:
 
 ```toml
 [custom_providers.opper]
@@ -37,24 +38,25 @@ api_key_env = "OPPER_API_KEY"
 model = "claude-sonnet-4-6"
 ```
 
-Keep both `base_url` values ending in `/v3/compat`. The OpenAI client appends
-`/chat/completions` and the Anthropic client appends `/v1/messages` when it
-sends a request, so do not add `/v1` to the configured base URL.
+Keep both `base_url` values ending in `/v3/compat`. The OpenAI client
+appends `/chat/completions` and the Anthropic client appends
+`/v1/messages` when it sends a request, so do not add `/v1` to the
+configured base URL.
 
 Select any route and model with the standard CLI flags:
 
 ```bash
-zerostack-ts --provider opper --model claude-sonnet-4-6
-zerostack-ts --provider opper --model gemini-3.8-flash
-zerostack-ts --provider opper-anthropic --model claude-sonnet-4-6
+tiny-crow --provider opper --model claude-sonnet-4-6
+tiny-crow --provider opper --model gemini-3.8-flash
+tiny-crow --provider opper-anthropic --model claude-sonnet-4-6
 ```
 
-## Model Configuration
+## Models and pools
 
 Bare model names such as `claude-sonnet-4-6` are pools: Opper picks the
-provider route for each request. To pin a route, use a `provider/model` id such
-as `anthropic/claude-sonnet-4-6`. The full list of model ids is at
-https://opper.ai/models.
+provider route for each request. To pin a route, use a `provider/model`
+id such as `anthropic/claude-sonnet-4-6`. The full list of model ids is
+at https://opper.ai/models.
 
 | Model | Context window |
 | ----- | -------------: |
@@ -64,7 +66,8 @@ https://opper.ai/models.
 Token rates are the model providers' rates with no markup. See
 https://opper.ai/pricing for details.
 
-The optional quick-model entries below set the context window for each model:
+The optional quick-model entries below set the context window for each
+model:
 
 ```toml
 [quick_models.opper-sonnet]
@@ -79,5 +82,5 @@ context_window = 1048576
 ```
 
 Switch to either entry with `--quick-model opper-sonnet` or
-`--quick-model opper-flash`. Change the `provider` value in a quick-model entry
-to use another route from the configuration above.
+`--quick-model opper-flash`. Change the `provider` value in a
+quick-model entry to use another route from the configuration above.

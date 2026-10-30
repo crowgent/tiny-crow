@@ -4,9 +4,9 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 export function loopDataDir(): string {
-  if (process.env.ZS_DATA_DIR) return process.env.ZS_DATA_DIR.replace(/^~/, homedir());
+  if (process.env.TC_DATA_DIR) return process.env.TC_DATA_DIR.replace(/^~/, homedir());
   const base = process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share");
-  return join(base, "zerostack-ts");
+  return join(base, "tiny-crow");
 }
 
 export function transcriptDir(sessionId: string, baseDir?: string): string {

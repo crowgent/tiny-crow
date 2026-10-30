@@ -1,10 +1,10 @@
-# Formula for zerostack-ts, the Node.js / TypeScript application.
+# Formula for tiny-crow, the Node.js / TypeScript application.
 # Runtime: Node.js 24, entry point node src/main.ts. The application
 # tree is platform-independent, so there is no per-platform archive.
 # NOTE: the 1.8.5 source archive location and checksum are publish-time
 # distribution metadata and are not invented here; the install, wrapper,
 # dependency, and test steps below are complete as written.
-class ZerostackTs < Formula
+class TinyCrow < Formula
   desc "Minimal coding agent TUI, ported to TypeScript"
   version "1.8.5"
   license "GPL-3.0-only"
@@ -14,15 +14,15 @@ class ZerostackTs < Formula
   def install
     system "npm", "install"
     system "npm", "run", "typecheck"
-    (share/"zerostack-ts").install "src", "data", "package.json", "package-lock.json", "node_modules", "README.md", "LICENSE"
-    (bin/"zerostack-ts").write <<~EOS
+    (share/"tiny-crow").install "src", "data", "package.json", "package-lock.json", "node_modules", "README.md", "LICENSE"
+    (bin/"tiny-crow").write <<~EOS
       #!/bin/sh
-      exec node #{share}/zerostack-ts/src/main.ts "$@"
+      exec node #{share}/tiny-crow/src/main.ts "$@"
     EOS
-    (bin/"zerostack-ts").chmod 0o755
+    (bin/"tiny-crow").chmod 0o755
   end
 
   test do
-    assert_match(/^zerostack-ts /, shell_output("#{bin}/zerostack-ts --version"))
+    assert_match(/^tiny-crow /, shell_output("#{bin}/tiny-crow --version"))
   end
 end

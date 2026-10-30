@@ -10,7 +10,7 @@ import {
 
 let counter = 0;
 function tempDir(): string {
-  const dir = path.join(os.tmpdir(), `zerostack_ctx_test_${process.pid}_${counter++}`);
+  const dir = path.join(os.tmpdir(), `tiny-crow_ctx_test_${process.pid}_${counter++}`);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
   return dir;

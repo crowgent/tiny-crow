@@ -1,13 +1,13 @@
 ---
-description: "How zerostack-ts releases are versioned: package.json is the single source of truth, and releases are tagged from main."
+description: "How tiny-crow releases are versioned: package.json is the single source of truth, and releases are tagged from main."
 ---
 
 # Publishing Releases
 
-This guide covers the release workflow for the TypeScript port: bumping
-the version, verifying the tree, tagging, and pushing.
+This guide covers the release workflow for tiny-crow: bumping the
+version, verifying the tree, tagging, and pushing.
 
-## Version source of truth
+## One source of truth for the version
 
 The version lives in `package.json` (`"version": "1.8.5"` at the time of
 writing). Nothing else carries the version — do not bump it anywhere
@@ -17,7 +17,7 @@ else. Confirm the current version at any time with:
 npm run sync-version
 ```
 
-## Release steps
+## Steps for a release
 
 1. Verify the working tree is clean.
 2. Bump the version in `package.json` (patch, minor, or major).

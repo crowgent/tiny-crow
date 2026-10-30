@@ -11,7 +11,7 @@
 //     --help. src/logging.ts exports VERSION, written into crash reports
 //     and compared by src/docs.ts against the stored current_version file
 //     to decide whether to refresh the global guides.
-//     src/ui/events.ts exports ZEROSTACK_TS_VERSION, shown in the welcome
+//     src/ui/events.ts exports TINY_CROW_VERSION, shown in the welcome
 //     banner. These three literals are the ONLY version values the code
 //     reads, and they are what this script rewrites.
 //   * There are no packaging manifests in this port (no platform
@@ -38,7 +38,7 @@ export interface VersionTarget {
 export const TARGETS: readonly VersionTarget[] = [
   { file: "src/cli.ts", constant: "CLI_VERSION" },
   { file: "src/logging.ts", constant: "VERSION" },
-  { file: "src/ui/events.ts", constant: "ZEROSTACK_TS_VERSION" },
+  { file: "src/ui/events.ts", constant: "TINY_CROW_VERSION" },
 ];
 
 export interface SyncResult {
