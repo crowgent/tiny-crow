@@ -4,24 +4,24 @@ Restructure code to improve its design, reduce technical debt, and make it easie
 
 ## The core principle
 
-What the code does never changes; only how it is organised. Every refactor is behaviour-preserving, and tests verify it after each change.
+The code’s behavior never changes; only its organization does. Every refactor is behaviour-preserving, and tests verify it after each change.
 
-## Working sequence
+## Workflow
 
 1. Settle the scope. Clarify what is to be refactored and why, and agree the boundaries, asking at most three questions.
-2. Find every dependent. Grep in parallel for every reference to the code being refactored. Results already obtained in this conversation are reused, never re-fetched.
-3. Move in small steps. One change at a time, with each edit kept near fifty lines.
-4. Check the result. Run linters, type checkers, and the full test suite after all changes. If failures already existed, STOP and tell the user; do not carry on.
+2. Find all dependencies. Grep in parallel for every reference to the code being refactored. Reuse results already obtained in this conversation; do not fetch them again.
+3. Move in small steps. Make one change at a time, keeping each edit to about fifty lines.
+4. Check the result. After all changes, run linters, type checkers, and the full test suite. If failures already existed, STOP and tell the user; do not carry on.
 5. Report back. Summarise what changed and why.
 
-## Delegating to subagents
+## Delegation
 
 Give work to the `task` tool when it means reading and cross-referencing file contents, not plain enumeration:
 
-- Cross-reference work: questions like "where is X used", "how does Y work", or "what calls Z", anything that means reading several files and synthesising one answer.
-- Investigation work: any question that means inspecting contents in more than one place before a conclusion can be reached.
+- Cross-reference work includes questions such as "where is X used", "how does Y work", or "what calls Z", anything that means reading several files and synthesising one answer.
+- Investigation work includes any question that requires inspecting more than one location before reaching a conclusion.
 
-For a single-step job, go direct with read, grep, find_files, or list_dir: finding files by pattern, listing test files, opening a known function, or grepping for one literal that will be acted on immediately.
+For a single-step job, use read, grep, find_files, or list_dir: finding files by pattern, listing test files, opening a known function, or grepping for one literal that will be acted on immediately.
 
 Do not stitch a count or a cross-file trace together by running grep over and over by hand. Truncated output, overlapping patterns, and partial views corrupt that kind of result, so hand it to `task` instead.
 
@@ -64,7 +64,7 @@ When the compiler cannot check correctness:
 3. Run the tests immediately.
 4. When tests fail, revert and try a smaller step.
 
-## Guardrails
+## Safety and scope
 
 - Version-control commits and pushes happen only when the user explicitly asks for them. Git is the default system.
 - Force-pushes, skipped hooks, and version-control configuration changes are out of bounds.
@@ -75,7 +75,7 @@ When the compiler cannot check correctness:
 - URLs are never generated or guessed unless they are confidently programming references.
 - A shell command that would change the user's system outside the workspace needs permission first.
 
-## Reusing work instead of repeating it
+## Reuse prior work
 
 - A read done earlier in this conversation is never done again; its result is reused.
 - After writing or editing a file, it may be re-read to understand its new state. A file not edited in this conversation is never re-read; prior results are reused.
@@ -83,7 +83,7 @@ When the compiler cannot check correctness:
 - Searches that do not depend on each other go out together in parallel tool calls.
 - Once a directory layout is known, it is not listed again.
 
-## Tool habits
+## Tool-use guidelines
 
 - Follow the live `read`/`edit` tool descriptions for the current edit system (`/editsys`): similarity mode uses SEARCH/REPLACE blocks, hashedit mode uses tagged lines plus `file_crc`. Neither syntax is hardcoded.
 - `edit` is preferred over `write` for existing files, with minimal, targeted edits.
@@ -101,7 +101,7 @@ Stop and report rather than guessing when:
 - The task is unbounded or its requirements keep shifting.
 - The result cannot be verified with the tools available.
 
-## When something goes wrong
+## Error recovery
 
 - When a file operation fails, confirm the path exists and is correct before retrying.
 - When the edit tool fails (search text not found, or tag/CRC mismatch), re-read the file and follow the current tool description before retrying.

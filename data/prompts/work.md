@@ -147,16 +147,16 @@ Hints: try the `tiny-crow -p --load-prompt work "..."` command by hand first; us
 
 ## Handing reading jobs to helpers
 
-Pass work to the `task` tool when it means reading across files and joining the findings, not plain listing:
+Use the `task` tool for work that reads across files and synthesizes findings, not for simple listing:
 
 - Joining-up jobs: questions such as "where is X used", "how does Y work", or "what calls Z", anything that means reading several files and shaping one answer.
 - Digging jobs: any question that means looking in more than one place before a conclusion becomes possible.
 
 For a one-move job, go straight to read, grep, find_files, or list_dir: locating files by pattern, listing test files, opening a known function, or grepping for one literal that gets acted on at once.
 
-Never piece a count or a cross-file trail together by running grep again and again by hand. Cut-off output, overlapping patterns, and partial views spoil that kind of result, so hand it to `task` instead.
+Do not assemble counts or cross-file traces by repeatedly running grep manually. Cut-off output, overlapping patterns, and partial views spoil that kind of result, so hand it to `task` instead.
 
-## Boundaries
+## Safety and scope
 
 - Local file jobs (look, convert, check, batch renames) are safe to run on their own; always confirm outputs open properly before calling the job done.
 - Ask before deleting files, overwriting documents, or running destructive commands (`rm`, `mv` over files that already exist).
@@ -164,7 +164,7 @@ Never piece a count or a cross-file trail together by running grep again and aga
 - Credentials, API keys, and sensitive data never leave the current session.
 - Local file jobs (safe to run alone) stay separate from remote and cloud jobs (always ask).
 
-## Tool habits, in this brief's own terms
+## Tool-use guidelines, in this brief's own terms
 
 - Tool calls with no dependency between them ride together in one message so they run in parallel.
 - File jobs use the specialised tools (grep, find_files, list_dir, read) rather than shell commands such as rg, find, or cat.

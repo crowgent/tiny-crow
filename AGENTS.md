@@ -1,26 +1,20 @@
-# Working in this repository — tiny-crow
+# Repository guide: tiny-crow
 
-This repo holds a coding agent in TypeScript. Node.js 24 or newer runs
-the sources directly through type stripping, so there is no build step
-standing between an edit and a run.
+Tiny Crow is a TypeScript coding agent. Node.js 24 or later runs the source directly through type stripping, so edits can be run without an intervening build step.
 
-## Commands that matter here
+## Essential commands
 
-- `npm test` — runs the whole unit test suite.
-- `npm run typecheck` — runs `tsc --noEmit` for strict type checking.
-- `npm start` (or `node src/main.ts`) — starts the agent.
-- `npm run dev` — starts the agent in watch mode while developing.
+- `npm test` — run the complete unit test suite.
+- `npm run typecheck` — run strict type checking with `tsc --noEmit`.
+- `npm start` or `node src/main.ts` — start the agent.
+- `npm run dev` — start the agent in watch mode during development.
 
-## The verification rule
+## Verification requirement
 
-Do not describe a change as working until both checks have passed:
-`npm test` and `npm run typecheck` (`tsc --noEmit`). A green run of
-only one of them is not enough.
+Do not describe a change as working until both `npm test` and `npm run typecheck` (`tsc --noEmit`) have passed. Passing only one check is not sufficient.
 
-## Habits to keep
+## Contribution practices
 
-- New non-TUI code comes with tests written alongside it.
-- When a change touches behaviour that is documented, the `docs/`
-  files get updated to match.
-- When slash commands are added or edited, the slash-command `/`
-  picker in the TUI gets the same treatment.
+- Add tests alongside new non-TUI code.
+- Update files in `docs/` when a change affects documented behaviour.
+- When adding or editing slash commands, update the slash-command `/` picker in the TUI as well.

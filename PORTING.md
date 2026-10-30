@@ -1,188 +1,95 @@
-# Tiny Crow — Project Overview
+# Tiny Crow project and porting overview
 
-## What this is
+## Project summary
 
-Tiny Crow is a compact terminal coding agent, built in TypeScript for
-Node.js and executed straight from source thanks to Node 24's type
-stripping — no build step, no bundler, no runtime dependencies. Give
-it a codebase and a model, and it will read, write, edit, search, and
-run commands there for you, pausing to ask whenever your permission
-rules require it.
+Tiny Crow is a compact terminal coding agent written in TypeScript for Node.js. Node.js 24's type stripping executes it directly from source, with no build step, bundler, or runtime dependencies. Given a codebase and a model, it can read, write, edit, search, and run commands in that codebase, pausing whenever its permission rules require approval.
 
-## What it does
+## Capabilities
 
-- Talks to many model providers — OpenRouter, OpenAI, Anthropic,
-  Gemini, Ollama, OpenCode Zen and Go, and any OpenAI-compatible
-  endpoint you set up yourself — all through one provider layer.
-- Hands the agent a complete toolkit: file reading, writing and
-  editing, grep searching, file finding, directory listing, task
-  tracking, and shell execution, together with language-server
-  diagnostics.
-- Checks every tool call against a permission system: six modes
-  (restrictive, readonly, planwrite, guarded, standard, yolo), glob
-  and regex rules per tool, an allowlist that lasts for the session,
-  and detection of repeated identical calls (doom loops).
-- Stores sessions on disk for saving, resuming, rewinding, redoing,
-  and exporting; long conversations compact themselves automatically
-  so they fit the model's context window.
-- Draws a complete terminal interface: Markdown output, mouse
-  selection and copy, scrollback, a status bar you can configure, and
-  switchable system prompts (`code`, `plan`, `review`, `debug`, `ask`,
-  `brainstorm`, and more) that change how the agent behaves.
-- Grows through optional subsystems: MCP servers, ACP editor
-  integration, lifecycle hooks, a second-model advisor, persistent
-  Markdown memory, parallel read-only subagents, git worktrees,
-  headless loops, multimodal input, prompt chaining, and status
-  signals sent over a Unix socket for external status bars.
+Tiny Crow supports OpenRouter, OpenAI, Anthropic, Gemini, Ollama, OpenCode Zen, OpenCode Go, and user-configured OpenAI-compatible endpoints through one provider layer. The agent toolkit includes file reading, writing and editing, grep, file finding, directory listing, task tracking, shell execution, and language-server diagnostics.
 
-## Running it
+Every tool call is checked by a permission system with six modes (`restrictive`, `readonly`, `planwrite`, `guarded`, `standard`, and `yolo`), per-tool glob and regex rules, a session-long allowlist, and repeated-call (doom-loop) detection. Sessions can be saved, resumed, rewound, redone, and exported. Long conversations compact automatically to fit the model context window.
 
-Requirements: Node.js 24 or newer. Install the type-checking dev
-dependencies once with `npm install` (TypeScript and `@types/node`
-only — the program itself uses Node's standard library plus `fetch`).
+The terminal interface provides Markdown output, mouse selection and copy, scrollback, a configurable status bar, and switchable system prompts such as `code`, `plan`, `review`, `debug`, `ask`, and `brainstorm`. Optional subsystems include MCP servers, ACP editor integration, lifecycle hooks, a second-model advisor, persistent Markdown memory, parallel read-only subagents, git worktrees, headless loops, multimodal input, prompt chaining, and Unix-socket status signals for external status bars.
+
+## Running and checking the project
+
+**Requirement:** Node.js 24 or newer. Install development dependencies once with `npm install`. These are only TypeScript and `@types/node`; the program itself uses Node's standard library and `fetch`.
 
 ```sh
-npm start            # node src/main.ts — interactive TUI
+npm start                         # node src/main.ts — interactive TUI
 node src/main.ts --help
 node src/main.ts --version        # tiny-crow 1.8.5
 node src/main.ts -p "hello"       # headless print mode
-node src/main.ts --print-config   # resolved configuration and exit
-npm run typecheck    # tsc --noEmit (must be clean)
-npm test             # node --test tests/*.test.ts tests/hooks/*.test.ts
+node src/main.ts --print-config   # resolved configuration, then exit
+npm run typecheck                 # tsc --noEmit (must be clean)
+npm test                          # node --test tests/*.test.ts tests/hooks/*.test.ts
 ```
 
-`package.json` scripts also include `dev` (`node --watch src/main.ts`),
-`check` (alias of `typecheck`), `lint` (`tsc --noEmit`), and hook
-install/remove helpers.
+Other `package.json` scripts include `dev` (`node --watch src/main.ts`), `check` (an alias for `typecheck`), `lint` (`tsc --noEmit`), and hook install/remove helpers.
 
-The version lives in `package.json` (`1.8.5`); it is the single source
-of truth, and `npm run sync-version` reports it. See
-`docs/PUBLISHING_RELEASES.md` for the release workflow.
+The version is declared in `package.json` (`1.8.5`), the single source of truth; `npm run sync-version` reports it. See [docs/PUBLISHING_RELEASES.md](docs/PUBLISHING_RELEASES.md) for the release workflow.
 
-## The shape of the code
+## Code layout and execution flow
 
-The full layout, types, and data flow are documented in
-`ARCHITECTURE.md` at the repository root. In brief:
+The full layout, types, and data flow are described in the root [ARCHITECTURE.md](ARCHITECTURE.md).
 
 | Area | Responsibility |
-|---|---|
-| `src/main.ts`, `src/cli.ts` | Where the program starts, how CLI flags are parsed, which mode runs |
-| `src/provider.ts`, `src/auth.ts` | Provider clients and streaming, plus where API keys come from |
-| `src/engine/`, `src/agent/` | The agent loop and runner, the builder, prompts, and core tools |
+| --- | --- |
+| `src/main.ts`, `src/cli.ts` | Program entry point, CLI parsing, and mode selection |
+| `src/provider.ts`, `src/auth.ts` | Provider clients and streaming; API-key sources |
+| `src/engine/`, `src/agent/` | Agent loop and runner, builder, prompts, and core tools |
 | `src/session/` | Session state, JSON storage, chat history, and compaction |
 | `src/permission/` | Glob and regex rules, permission prompts, and doom-loop detection |
-| `src/ui/` | The hand-rolled TUI: renderer, input editor, pickers, slash commands, status bar |
-| `src/context/` | Prompt and theme loading, plus AGENTS.md / ARCHITECTURE.md context files |
-| `src/config/` | Config loading (TOML/YAML/JSON) and the config types |
-| `src/extras/` | Optional subsystems: loop, MCP, ACP, memory, subagents, worktrees, advisor, hooks, LSP, multimodal, prompt chains, status signals |
-| `src/sandbox.ts` | Wrapping bash commands with `bwrap` / `zerobox` |
-| `src/startup.ts`, `src/logging.ts`, `src/docs.ts` | Startup phases, structured logging, and the built-in docs lookup |
+| `src/ui/` | Hand-built TUI: renderer, input editor, pickers, slash commands, and status bar |
+| `src/context/` | Prompt and theme loading, plus `AGENTS.md` / `ARCHITECTURE.md` context files |
+| `src/config/` | TOML/YAML/JSON config loading and config types |
+| `src/extras/` | Optional loop, MCP, ACP, memory, subagents, worktrees, advisor, hooks, LSP, multimodal, prompt chains, and status signals |
+| `src/sandbox.ts` | Bash-command wrapping with `bwrap` / `zerobox` |
+| `src/startup.ts`, `src/logging.ts`, `src/docs.ts` | Startup phases, structured logging, and built-in documentation lookup |
 
-Control flows from CLI parsing, through config and context loading and
-session loading, into one of the modes: interactive TUI (the default),
-single-reply print mode, headless loop mode, or ACP server mode. In the
-TUI, user input feeds the agent runner, whose streamed events go to the
-renderer and into the session; tool calls pass through the hook
-dispatcher and then the permission checker before executing.
+Control flows from CLI parsing through config, context, and session loading into one of four modes: interactive TUI (default), single-reply print mode, headless loop mode, or ACP server mode. In the TUI, input feeds the agent runner; streamed events go to the renderer and session. Tool calls pass through the hook dispatcher and then the permission checker before execution.
 
-Sessions are JSON files under `$TC_DATA_DIR` (or the operating system's
-data directory) in `sessions/`; chat history is appended to
-`chat_history.jsonl` in the same directory. Logs go to `logs/` as
-`tiny-crow-<timestamp>_<pid>.log` when `-v` or `--log-file` is used.
+Sessions are JSON files under `$TC_DATA_DIR` (or the operating system's data directory) in `sessions/`. Chat history is appended to `chat_history.jsonl` in the same directory. Logs are stored in `logs/` as `tiny-crow-<timestamp>_<pid>.log` when `-v` or `--log-file` is used.
 
-## Configuration
+## Configuration and data
 
-Tiny Crow reads an optional config file — TOML, YAML, or JSON — resolved
-in this order: `$TC_CONFIG_DIR`, then `~/.config/tiny-crow/`, then
-`~/.local/share/tiny-crow/` (on macOS, `~/Library/Application
-Support/tiny-crow/`). A project-local `.tiny-crow/config.toml` merges
-over the global config. Every key, its type, and its default is
-documented in `docs/CONFIG.md`; the highlights are provider and model
-selection, quick models (named provider + model pairs), permission
-rules, sandbox settings, MCP servers, status bar layout, colours, and
-the advisor, LSP, and hook subsystems.
+The optional config file can use TOML, YAML, or JSON. Resolution order is `$TC_CONFIG_DIR`, then `~/.config/tiny-crow/`, then `~/.local/share/tiny-crow/` (on macOS, `~/Library/Application Support/tiny-crow/`). A project-local `.tiny-crow/config.toml` merges over the global config. [docs/CONFIG.md](docs/CONFIG.md) documents every key, type, and default; highlights include provider and model selection, quick models (named provider/model pairs), permission rules, sandbox settings, MCP servers, status-bar layout, colours, and advisor, LSP, and hook subsystems.
 
-Prompts live in `~/.local/share/tiny-crow/prompts/` (plus project and
-CLI tiers), themes in the matching `themes/` directories, and custom
-prompts are plain Markdown files referenced by name. The agent also
-loads `AGENTS.md` (or `CLAUDE.md`) and, when enabled, `ARCHITECTURE.md`
-from the project and its ancestors; see `docs/ARCHITECTURE.md`.
+Prompts live in `~/.local/share/tiny-crow/prompts/` along with project and CLI tiers; themes live in corresponding `themes/` directories. Custom prompts are plain Markdown files referenced by name. The agent also loads `AGENTS.md` (or `CLAUDE.md`) and, when enabled, `ARCHITECTURE.md` from the project and its ancestors. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## Data files
+Data files are kept under `data/`:
 
-Data is data, not code, and lives under `data/`:
+| Path | Purpose |
+| --- | --- |
+| `data/prompts/*.md` | Built-in system prompts |
+| `data/themes/*.json` | Built-in colour themes |
+| `data/models.json` | Model catalog, refreshed weekly from models.dev by `node scripts/gen-models-catalog.ts` |
+| `data/tiny-crow-transports.json` | Baked transport map used for OpenCode Zen / Go model routing |
 
-- `data/prompts/*.md` — the built-in system prompts
-- `data/themes/*.json` — the built-in colour themes
-- `data/models.json` — the model catalog, refreshed weekly from
-  models.dev by `node scripts/gen-models-catalog.ts`
-- `data/tiny-crow-transports.json` — the baked transport map used for
-  OpenCode Zen / Go model routing
+## Tooling and distribution
 
-## Scripts
+The `scripts/` directory contains TypeScript tooling wired to npm scripts: `gen-models-catalog.ts` fetches and filters the model catalog into `data/models.json` and `data/tiny-crow-transports.json`; `setup-neovim.ts` configures the Neovim integration; `sync-version.ts` reports and checks the version in `package.json` against literals read by the program; and `install.ts` installs the `tiny-crow` command. `install.sh` is a thin wrapper that checks for Node.js 24 or newer first.
 
-`scripts/` holds TypeScript tooling, each wired to an npm script:
+Scripts run directly through npm scripts; there is no separate task-runner file. An earlier justfile that mirrored them was removed as redundant. There are no distribution recipes for Nix, AUR, conda, or Homebrew: they were removed as unused because no workflow or install route used them and their download references did not match the release tarball. The install route is the git clone plus `npm install` flow in the README, and releases ship the Node tarball. CI, docs deployment, releases, and the weekly model-catalog refresh are in `.github/workflows/`.
 
-- `scripts/gen-models-catalog.ts` — fetch and filter the model catalog
-  into `data/models.json` and `data/tiny-crow-transports.json`
-- `scripts/setup-neovim.ts` — set up the Neovim integration
-- `scripts/sync-version.ts` — report (and check) the version from
-  `package.json` against the literals the program reads
-- `scripts/install.ts` — install the `tiny-crow` command; `install.sh`
-  is a thin wrapper that checks Node >= 24 first
+## Tests and contributor practices
 
-Those scripts are run directly through the npm scripts (test, check,
-run, and the rest) — there is no separate task-runner file; an earlier
-justfile that mirrored them was removed as redundant. There are no
-distribution recipes (Nix, AUR, conda, Homebrew): they were removed as
-unused, since no workflow or install route used them and their download
-references did not match the release tarball. The install route is the
-git clone plus npm install flow in the README, and releases ship the
-Node tarball. CI, docs
-deployment, releases, and the weekly model-catalog refresh live in
-`.github/workflows/`.
-
-## Testing it, and the contributor habits
-
-Tests live in `tests/` as `*.test.ts` files (plus `tests/hooks/` and
-`tests/hooks/corpus/` fixtures) and run with Node's built-in test
-runner:
+Tests are `*.test.ts` files in `tests/`, with additional fixtures in `tests/hooks/` and `tests/hooks/corpus/`. Run them with Node's built-in runner:
 
 ```sh
 npm test             # node --test tests/*.test.ts tests/hooks/*.test.ts
 npm run typecheck    # tsc --noEmit
 ```
 
-Type safety is checked separately from the tests; never claim a change
-works without both passing. Headless main-loop tests drive the real TUI
-loop with no terminal and no network, rendering into a fake backend and
-feeding scripted user events, while agent runs use a mock completion
-model.
+Tests and type checking are separate; do not claim a change works unless both pass. Headless main-loop tests drive the real TUI loop without a terminal or network, render into a fake backend, and feed scripted user events. Agent runs use a mock completion model.
 
-A few ground rules for contributors, also stated in `AGENTS.md`:
+Contributor practices, also recorded in [AGENTS.md](AGENTS.md): add tests with new non-TUI code; update `docs/` when documented behaviour changes; and update the TUI slash-command `/` picker when adding or editing slash commands. Running `npm test` creates an empty `target/` directory at the repository root (sandbox-mask tests use `cwd/target/` as scratch). It is test debris, not a deliverable, and can be deleted after the run.
 
-- Write tests when writing new non-TUI code.
-- Update the `docs/` files when a change affects documented behaviour.
-- If adding or editing slash commands, edit the slash-command `/`
-  picker in the TUI.
-- Running `npm test` creates an empty `target/` directory in the repo
-  root (sandbox-mask tests use `cwd/target/` as scratch). It is debris,
-  not a deliverable, and can be deleted after a test run.
+## Known limitations
 
-## Known limits, stated plainly
-
-- Live provider behaviour is covered by unit and integration tests
-  with fakes and local processes, not against live vendor APIs.
-- The sandbox is a seatbelt against mistakes, not a container for
-  untrusted code; see `SECURITY.md` for exactly what it does and does
-  not protect against, including the gaps around sockets, the home
-  directory, and the tool-result channel.
-- The `danger_accept_invalid_certs` toggle logs the same MITM warning
-  it always did but cannot disable TLS verification under
-  `node:fetch`.
-- Some internal type shapes are mirrored locally across modules rather
-  than imported from one canonical export; behaviour is unaffected and
-  the typecheck is clean, but a future cleanup pass could point them at
-  a single source each.
-- The `/mcp login` deferred outcome degrades to an error line instead
-  of the login flow when handled through the app's slash-result path.
+- Live-provider behaviour is covered by unit and integration tests using fakes and local processes, not live vendor APIs.
+- The sandbox is a seatbelt against mistakes, not a container for untrusted code. See [SECURITY.md](SECURITY.md) for its guarantees and gaps, including sockets, the home directory, and the tool-result channel.
+- The `danger_accept_invalid_certs` toggle logs the same MITM warning as before, but cannot disable TLS verification under `node:fetch`.
+- Some internal type shapes are mirrored locally across modules instead of imported from one canonical export. Behaviour is unaffected and type checking is clean, but a future cleanup could point them to a single source each.
+- The `/mcp login` deferred outcome becomes an error line instead of the login flow when handled through the app's slash-result path.

@@ -2,7 +2,7 @@
 
 Create, optimise, or rewrite agent prompts, system prompts, and reusable prompt templates.
 
-## Working sequence
+## Workflow
 
 ### Stage 1: Pin down the contract
 
@@ -72,18 +72,18 @@ When the user supplies a skill definition (from superpower, claude-plugins, or a
 4. Add tiny-crow-specific sections: include Anti-Repetition Rules, Tool Usage Guidelines, Error Recovery, and Safety Rules as applicable to the prompt's mode.
 5. Preserve the skill's domain knowledge: when the skill has specialised checklists, frameworks, or reference tables, keep them in a dedicated section under a clear heading.
 
-## Delegating to subagents
+## Delegation
 
 Give work to the `task` tool when it means reading and cross-referencing file contents, not plain enumeration:
 
-- Cross-reference work: questions like "where is X used", "how does Y work", or "what calls Z", anything that means reading several files and synthesising one answer.
-- Investigation work: any question that means inspecting contents in more than one place before a conclusion can be reached.
+- Cross-reference work includes questions such as "where is X used", "how does Y work", or "what calls Z", anything that means reading several files and synthesising one answer.
+- Investigation work includes any question that requires inspecting more than one location before reaching a conclusion.
 
-For a single-step job, go direct with read, grep, find_files, or list_dir: finding files by pattern, listing test files, opening a known function, or grepping for one literal that will be acted on immediately.
+For a single-step job, use read, grep, find_files, or list_dir: finding files by pattern, listing test files, opening a known function, or grepping for one literal that will be acted on immediately.
 
 Do not stitch a count or a cross-file trace together by running grep over and over by hand. Truncated output, overlapping patterns, and partial views corrupt that kind of result, so hand it to `task` instead.
 
-## Guardrails
+## Safety and scope
 
 - Version-control commits and pushes happen only when the user explicitly asks for them. Git is the default system.
 - Force-pushes, skipped hooks, and version-control configuration changes are out of bounds.
@@ -91,7 +91,7 @@ Do not stitch a count or a cross-file trace together by running grep over and ov
 - Real secrets, tokens, or credentials are not included in prompt examples; placeholders are used instead.
 - AGENTS.md, ARCHITECTURE.md, and project configuration files are not modified unless the prompt explicitly targets them.
 
-## Reusing work instead of repeating it
+## Reuse prior work
 
 - A read done earlier in this conversation is never done again; its result is reused.
 - After writing or editing a file, it may be re-read to understand its new state. A file not edited in this conversation is never re-read; prior results are reused.
@@ -111,7 +111,7 @@ Where web search MCP tools (Exa, Context7, Grep.app) are available:
 - Related queries are combined into a single parallel batch.
 - Official documentation is preferred over community answers.
 
-## Tool habits
+## Tool-use guidelines
 
 - Tool calls that do not depend on each other are batched into a single message so they run in parallel.
 - `edit` is preferred over `write` for existing files, with minimal, targeted edits.
@@ -122,7 +122,7 @@ Where web search MCP tools (Exa, Context7, Grep.app) are available:
 - When a tool call errors, read its message carefully before any retry.
 - The same failing operation is not retried more than twice without changing approach.
 
-## When something goes wrong
+## Error recovery
 
 - When a file operation fails, confirm the path exists and is correct before retrying.
 - When the edit tool fails with "oldString not found", re-read the file before constructing a new edit.

@@ -2,7 +2,7 @@
 description: "How a tiny-crow release is cut: the single version source, the health checks, and the annotated tag."
 ---
 
-# Shipping a tagged release
+# Publish a tagged release
 
 A release of tiny-crow is a tagged commit, not a built package.
 There is no build step to run first — Node.js 24 or newer runs
@@ -10,7 +10,7 @@ the TypeScript sources directly — so the work below is about
 getting the version right, proving the tree is healthy, and
 marking the commit.
 
-## What this workflow deliberately leaves out
+## Scope and exclusions
 
 - No registry step: nothing here publishes to a package registry.
   If a publishing step is ever introduced, its exact command
@@ -19,7 +19,7 @@ marking the commit.
   artifact to attach to the release. The tagged commit is the
   release.
 
-## The version lives in exactly one file
+## Version source
 
 The version is held in exactly one place: `package.json`
 (`"version": "1.8.5"` at the time of writing). Do not bump it in
@@ -30,7 +30,7 @@ anywhere. To see the current version at any moment, run:
 npm run sync-version
 ```
 
-## The release sequence, in order
+## Release sequence
 
 1. Check that the working tree is clean, with no uncommitted
    changes hanging around.

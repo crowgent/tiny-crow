@@ -2,14 +2,14 @@
 description: "Connecting tiny-crow to Cheaper Inference's multi-lab gateway as an OpenAI-compatible custom provider."
 ---
 
-# Cheaper Inference as a single key for many labs
+# Configure Cheaper Inference
 
 Cheaper Inference is a gateway: one key opens models from a range
 of labs through an OpenAI-compatible interface. Tiny-crow connects
 to its Chat Completions endpoint by treating it as a custom
 provider.
 
-## Key first, config second
+## Configure the API key and provider
 
 Sign up and create a key at https://cheaperinference.com/signup,
 then export it in your shell instead of writing it into the
@@ -49,7 +49,7 @@ A quick, tool-free smoke test looks like this:
 tiny-crow --provider cheaper-inference --model gpt-5.4-mini --no-tools --max-tokens 32 -p "Reply with exactly yes."
 ```
 
-## Which models your key can call
+## Discover available models and metadata
 
 The example names the model ID `gpt-5.4-mini` exactly as the
 gateway spells it. List what your account can reach with:

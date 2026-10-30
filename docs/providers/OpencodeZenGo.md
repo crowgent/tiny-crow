@@ -2,7 +2,7 @@
 description: "Running OpenCode Zen and Go models in tiny-crow, including Zen's keyless free tier."
 ---
 
-# OpenCode Zen and Go, without a custom provider
+# Configure OpenCode Zen and Go
 
 [OpenCode Zen](https://opencode.ai/docs/zen) charges as you go,
 while [OpenCode Go](https://opencode.ai/docs/go) is a $10/month
@@ -11,7 +11,7 @@ benchmarked for coding agents, and both ship in tiny-crow as
 first-class providers. They share a single
 `OPENCODE_API_KEY` environment variable between them.
 
-## Three transports behind one provider id
+## Model-specific API transports
 
 Behind a single provider id, tiny-crow speaks three API shapes
 — chat completions, responses, and Anthropic-native messages —
@@ -20,7 +20,7 @@ each model's documented endpoint. That mapping is compiled into
 the program and refreshed weekly from models.dev; `/models
 refresh` pulls the live list whenever you want it fresh.
 
-## Keys, and the free tier that needs none
+## API key and Zen free tier
 
 Export your key in the shell rather than embedding it in the
 config:
@@ -51,7 +51,7 @@ tiny-crow --provider opencode-zen --model kimi-k2.6
 tiny-crow --provider opencode-go --model kimi-k2.6
 ```
 
-## Shortcuts for the common picks
+## Quick models
 
 Shortcuts make the common picks one word long:
 
@@ -69,7 +69,7 @@ Use them with `--quick-model kimi-zen`, or switch inside a
 session by running `/provider opencode-zen` and then
 `/model` with `kimi-k2.6` as its argument.
 
-## Where it falls short
+## Limitations
 
 - Gemini models served through Zen (`gemini-*-flash`) do not
   appear in the compiled catalog: tiny-crow speaks the
