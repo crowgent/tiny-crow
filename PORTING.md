@@ -348,8 +348,10 @@ itself, explaining what was replaced.
   ARCHITECTURE.md, CODE_OF_CONDUCT.md, SECURITY.md (reporting via the
   repository Security tab / issue tracker, no personal contact emails).
   Total docs restoration: 22 files, 5,392 lines.
-- `assets/` — 4 files copied byte-identical (md5-verified):
-  banner.png, logo.png, logo_rounded.png, tui_screenshot0.png.
+- `assets/` — REMOVED 2026-10-30 on user instruction (previously 4 files
+  copied byte-identical: banner.png, logo.png, logo_rounded.png,
+  tui_screenshot0.png; no code, README, or docs file referenced them, so
+  removal breaks nothing).
 - `data/` — `data/session_export.html` copied byte-identical (the one
   data file missed); prompts (16), themes (17), models.json, and
   opencode-transports.json were already present and untouched.
