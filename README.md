@@ -1,273 +1,239 @@
-![Tiny Crow](assets/crow.png)
+<p align="center">
+  <img src="assets/crow.png" alt="Tiny Crow" width="180">
+</p>
 
-# Tiny Crow
+<h1 align="center">Tiny Crow</h1>
 
-A TypeScript terminal coding agent that runs directly from source on Node.js 24 or later. It has no build step and no runtime dependencies.
+<p align="center">
+  A focused coding agent in your terminal.<br>
+  Explore a codebase, plan a change, edit files, run tools, and keep your work moving—with the model and permission mode you choose.
+</p>
 
-**Version:** 1.8.5 · **License:** GPL-3.0 · **Runtime:** Node.js 24+
+<p align="center">
+  <a href="https://nodejs.org/"> <img src="https://img.shields.io/badge/Node.js-24%2B-43853d?style=flat-square&logo=node.js&logoColor=white" alt="Node.js 24 or later"></a>
+  <img src="https://img.shields.io/badge/TypeScript-native%20runtime-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript native runtime">
+  <img src="https://img.shields.io/badge/License-MIT-376f5b?style=flat-square" alt="MIT License">
+  <img src="https://img.shields.io/badge/Build-no%20build%20step-555?style=flat-square" alt="No build step">
+</p>
 
-[Quick start](#quick-start) · [Supported features](#supported-features) · [Providers](#providers) · [Prompts](#prompts) · [Permission modes](#permission-modes) · [Commands](#commands) · [Documentation](#documentation) · [License](#license)
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#what-you-can-do">Features</a> ·
+  <a href="#connect-a-model">Providers</a> ·
+  <a href="#work-your-way">Prompts and permissions</a> ·
+  <a href="#documentation">Documentation</a>
+</p>
 
 ---
 
+## At a glance
+
+Tiny Crow is a TypeScript terminal coding agent that runs directly on Node.js 24 or later. It has no build step and no runtime dependencies. Use it interactively, give it a focused one-shot task, or resume a previous session.
+
+| Project | Details |
+| --- | --- |
+| Current version | `1.8.5` |
+| Runtime | Node.js `24+` |
+| License | MIT |
+| Interface | Terminal UI |
+| Source | TypeScript, run directly by Node.js |
+
 ## Quick start
 
-### Install with the installer
+### 1. Install Tiny Crow
 
-Requires Node.js 24+ and `curl`. The installer places a `tiny-crow` launcher in `~/.local/bin` and keeps the sources in `~/.local/share/tiny-crow`:
+The installer requires Node.js 24+ and `curl`. It places the launcher in `~/.local/bin` and the source in `~/.local/share/tiny-crow`.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/crowgent/tiny-crow/main/install.sh | bash
 ```
 
-### Install from a clone
+Or clone the repository and install its development tools:
 
 ```bash
 git clone https://github.com/crowgent/tiny-crow.git
 cd tiny-crow
-npm install   # development tooling only; the agent needs no runtime packages
+npm install
 ```
 
-To invoke the source entry point by name, link it into a directory on your `PATH`:
+### 2. Set a model provider
+
+OpenRouter is the default provider. Export its API key before starting Tiny Crow:
 
 ```bash
-ln -s "$PWD/src/main.ts" ~/.local/bin/tiny-crow
-export PATH="$HOME/.local/bin:$PATH"
+export OPENROUTER_API_KEY="your-api-key"
 ```
 
-### Start a session
+Use the provider’s own key variable if you choose a different provider. See [Providers](#connect-a-model).
 
-OpenRouter is the default provider. Set its API key, then start the interactive agent:
+### 3. Start a session
 
 ```bash
-export OPENROUTER_API_KEY=<your key>
 npm start
 ```
 
-Other useful invocations:
+A few useful alternatives:
 
 ```bash
-npm start -- --no-color
-npm start -- -p "Summarise this codebase"
-npm start -- -c
-npm start -- --provider openrouter --model anthropic/claude-sonnet-4-6
+npm start -- -p "Summarise this codebase"  # Answer once, then exit
+npm start -- -c                            # Continue the latest session
+npm start -- --no-color                    # Use a monochrome interface
+npm start -- --provider anthropic          # Select a provider
 ```
 
-These run a monochrome interface, request a single answer and exit, continue the latest session, and select a provider/model respectively. For development, `npm run dev` relaunches the entry point whenever a source file changes.
+For day-to-day development, `npm run dev` restarts the entry point when source files change.
 
-**Platform note:** Windows has not been tried; behaviour there is unknown.
+## What you can do
 
----
+<table>
+  <tr>
+    <td width="50%"><strong>Work with code</strong><br>Read, search, write, and edit project files; run shell commands; track work with task tools.</td>
+    <td width="50%"><strong>Choose your workflow</strong><br>Switch between coding, planning, debugging, review, security review, refactoring, and other built-in prompt modes.</td>
+  </tr>
+  <tr>
+    <td><strong>Keep context across sessions</strong><br>Save, reopen, and resume sessions. Automatic compaction helps long conversations stay within the model context window.</td>
+    <td><strong>Control permissions</strong><br>Choose a permission mode, configure per-tool rules, and review operations that need approval.</td>
+  </tr>
+  <tr>
+    <td><strong>Extend the agent</strong><br>Connect MCP tools over stdio or HTTP, use built-in WebFetch and WebSearch tools, and configure lifecycle hooks.</td>
+    <td><strong>Work in parallel</strong><br>Delegate codebase exploration to subagents, run repeatable loops, and move between Git worktrees.</td>
+  </tr>
+  <tr>
+    <td><strong>Use project context</strong><br>Load `AGENTS.md`, `CLAUDE.md`, and—when enabled—`ARCHITECTURE.md` guidance from the project or parent directories.</td>
+    <td><strong>Use rich terminal capabilities</strong><br>View rendered Markdown, scroll through output, use mouse selection and copy, and optionally display model reasoning.</td>
+  </tr>
+  <tr>
+    <td><strong>Bring visual context</strong><br>Attach images and PDFs to messages.</td>
+    <td><strong>Integrate with other tools</strong><br>Use ACP server mode in compatible editors and publish run-state signals over a Unix socket.</td>
+  </tr>
+</table>
 
-## Supported features
+## Connect a model
 
-- **Multiple model backends:** seven built-in backends, plus custom providers, behind one provider layer.
-- **Agent tools:** file reading, writing and editing, search, shell execution, and task tracking.
-- **Persistent sessions:** save, reopen, and resume sessions; automatic compaction keeps long conversations within the context window.
-- **Terminal interface:** Markdown rendering, mouse selection and copy, scrollback, and a switch for displaying model reasoning.
-- **MCP and web tools:** connect external tools over stdio or HTTP; WebFetch and WebSearch are built in.
-- **Plain-text memory:** a global `MEMORY.md`, per-project daily logs, a scratchpad, and notes are included in the session system prompt.
-- **Lifecycle hooks:** external commands can observe or gate tool calls, prompts, and session events.
-- **Advisor:** consult a second model for strategic advice during a session, or route the question to you instead.
-- **Multimodal input:** attach images and PDFs to messages.
-- **Subagents:** use quick parallel helpers to explore a codebase.
-- **Repeatable loops:** repeat a prompt until a goal is reached.
-- **Git worktrees:** move between worktrees with `/worktree`.
-- **ACP server mode:** editors can drive Tiny Crow through the Agent Communication Protocol.
-- **Status signals:** emit run-state events (started, stopped, git conflict, or waiting on permission) over a Unix socket for status bars and other tooling.
-- **Prompt chaining:** configure transitions between phases such as brainstorm, plan, code, and review.
+Tiny Crow includes seven provider backends. OpenRouter is the default; Ollama does not require an API key.
 
----
-
-## Providers
-
-| Backend | Name in config | Default key variable |
+| Provider | Provider name | Default key variable |
 | --- | --- | --- |
 | OpenRouter | `openrouter` | `OPENROUTER_API_KEY` |
 | OpenAI | `openai` | `OPENAI_API_KEY` |
 | Anthropic | `anthropic` | `ANTHROPIC_API_KEY` |
-| Gemini | `gemini` / `google` | `GEMINI_API_KEY` |
-| Ollama | `ollama` | No key required |
-| OpenCode Zen | `opencode-zen` | `OPENCODE_API_KEY` (optional; without a key, only free models work) |
+| Gemini | `gemini` or `google` | `GEMINI_API_KEY` |
+| Ollama | `ollama` | Not required |
+| OpenCode Zen | `opencode-zen` | `OPENCODE_API_KEY` (optional; without it, only free models work) |
 | OpenCode Go | `opencode-go` | `OPENCODE_API_KEY` |
 
-Choose a provider in the config file, with a command-line flag, or through an environment variable:
+Choose a provider and model with command-line flags:
 
 ```bash
-tiny-crow --provider anthropic
 tiny-crow --provider openai --model gpt-4o
 ```
 
-`TC_PROVIDER` is the environment-variable equivalent of `--provider`, and `TC_MODEL` is the equivalent of `--model`.
+`TC_PROVIDER` and `TC_MODEL` are the environment-variable equivalents of `--provider` and `--model`. Services that speak the OpenAI wire format can be added as custom providers in the configuration file. See the [provider guide](docs/PROVIDERS.md) for endpoints, key lookup, transports, and prompt caching.
 
-Any service that speaks the OpenAI wire format—including a vLLM server, LiteLLM proxy, local model, or enterprise gateway—can be configured under `custom_providers`:
+## Work your way
 
-```json
-{
-  "custom_providers": {
-    "local-llm": {
-      "provider_type": "openai",
-      "base_url": "http://localhost:9000/v1",
-      "api_key_env": "LOCAL_LLM_API_KEY",
-      "model": "mistral-small"
-    }
-  }
-}
-```
+### Prompt modes
 
-See [docs/PROVIDERS.md](docs/PROVIDERS.md) for provider details, key lookup, transports, and prompt caching.
+Use `/prompt` to list or switch modes. Each mode gives the agent a different task posture.
 
----
-
-## Prompts
-
-Use `/prompt` to list or switch between built-in prompts. Each prompt sets the agent's posture for a task.
-
-| Prompt | Purpose |
+| Mode | Designed for |
 | --- | --- |
-| `code` (default) | Coding with full file and shell access and a test-first workflow |
-| `plan` | Explore and write a plan without changing anything |
-| `review` | Review code for correctness, design, tests, and impact |
-| `debug` | Find a root cause before suggesting a fix |
-| `ask` | Read-only access: read, grep, and find files; no writes or shell |
-| `brainstorm` | Explore and present ideas without writing code |
-| `frontend-design` | Design distinctive, production-quality interfaces |
-| `review-security` | Hunt for exploitable vulnerabilities |
-| `simplify` | Clarify code without changing behaviour |
-| `write-prompt` | Write and improve agent prompts |
-| `refactor` | Restructure for design and maintainability without changing behaviour |
-| `autoconfig` | Read docs and adjust config and prompts without writing code |
-| `orchestrator` | Handle heavy work with direct tool use and parallel subprocesses |
-| `write-text` | Produce clear, unambiguous technical writing in Simplified Technical English |
-| `default` | Assess the task and apply a suitable workflow |
-| `work` | Autonomous office work across mail, drive, chat, docs, and media tools |
+| `code` | Implementing changes with file and shell tools and a test-first workflow |
+| `plan` | Exploring a task and writing a plan without changing code |
+| `review` | Reviewing correctness, design, tests, and impact |
+| `debug` | Finding a root cause before proposing a fix |
+| `ask` | Read-only codebase questions |
+| `brainstorm` | Exploring ideas without writing code |
+| `frontend-design` | Designing distinctive interfaces |
+| `review-security` | Looking for exploitable vulnerabilities |
+| `simplify` | Clarifying code without changing behaviour |
+| `refactor` | Improving structure without changing behaviour |
+| `autoconfig` | Reading documentation and adjusting configuration or prompts |
+| `orchestrator` | Coordinating larger tasks with parallel subprocesses |
+| `write-prompt` | Creating or improving agent prompts |
+| `write-text` | Writing clear technical text |
+| `default` | Selecting a suitable workflow for the task |
+| `work` | Handling office workflows across supported local and connected tools |
 
-Custom prompts are Markdown files in `$XDG_CONFIG_HOME/tiny-crow/prompts/`, discovered by filename.
+Custom prompts are Markdown files in `$XDG_CONFIG_HOME/tiny-crow/prompts/`, discovered by filename. Tiny Crow can also offer configurable transitions between `brainstorm`, `plan`, `code`, and `/review`.
 
-The agent reads `AGENTS.md` or `CLAUDE.md` from the project root or any parent directory. When enabled, it also reads `ARCHITECTURE.md` from those locations, adding project conventions and design context to the system prompt. Use `-n` / `--no-context-files` to disable context-file loading.
+### Permission modes
 
-### Prompt phase transitions
-
-When `brainstorm`, `plan`, or `code` ends, Tiny Crow can offer the next phase (`brainstorm` → `plan` → `code` → `/review`) and ask `Continue to plan? [Y/N/B]`. `Y` continues, `N` stays in the current phase, and `B` (“but …”) continues with an additional instruction. Each transition can be enabled or disabled independently in config.
-
----
-
-## Permission modes
-
-| Mode | Flag | Behaviour |
-| --- | --- | --- |
-| `restrictive` | `-R` / `--restrictive` | Ask about every operation. Config rules are ignored unless enabled through `permission-modes`. |
-| `readonly` | `--read-only` | Permit only reads, greps, file search, and directory listings. Refuse writes, edits, shell, and all other operations. |
-| `planwrite` | — | Like readonly, but writing `PLAN*.md` files is permitted. |
-| `guarded` | `--guarded` | Allow reads; ask before writes, edits, shell, and all other operations. Config rules apply. |
-| `standard` (default) | — | Allow path tools in the working directory and below. Auto-allow safe shell commands (such as `ls`, `cat`, and `git log`); ask about paths outside it and unrecognised commands. Config rules apply and override mode defaults. |
-| `yolo` | `--yolo` | Allow everything except destructive shell commands (such as `rm`, `dd`, and `mkfs`), which still prompt. Config rules apply. |
-
-**Warning:** `--dangerously-skip-permissions` skips every check outright. It is not a mode and cannot be switched while running.
-
-Config permissions can be set per tool using glob patterns—for example, auto-allowing `write **.ts` while asking before any other write. Approvals are remembered for the rest of the session (the session allowlist), so the same operation is not repeatedly prompted.
-
-**Doom-loop detection:** Five identical tool calls in a row trigger a coaching message for allowed calls, or a prompt/denial depending on config, to stop a runaway agent from repeating itself.
-
----
-
-## Commands
-
-| Command | Purpose |
+| Mode | Summary |
 | --- | --- |
-| `/model` | Choose a different model |
-| `/thinking` | Adjust the thinking level |
-| `/clear` | Clear the conversation |
-| `/session` | List, save, or load sessions |
-| `/loop` | Schedule recurring prompts |
-| `/prompt` | List prompts or change the agent prompt |
+| `restrictive` | Ask about every operation. |
+| `readonly` | Allow read-only tools; refuse writes, edits, shell, and other operations. |
+| `planwrite` | Like `readonly`, but allow writing `PLAN*.md` files. |
+| `guarded` | Allow reads and ask before other operations. |
+| `standard` (default) | Allow path tools in the working directory; ask about outside paths and unrecognised shell commands. |
+| `yolo` | Allow operations except destructive shell commands, which still prompt. |
+
+Permission rules can further restrict or allow individual tools using glob patterns. `--dangerously-skip-permissions` bypasses every permission check; use it only when you understand the risk.
+
+## Commands you will use
+
+| Command | Action |
+| --- | --- |
+| `/help` | List available commands |
+| `/model` | Choose a model |
+| `/thinking` | Adjust reasoning level |
+| `/prompt` | List or change prompt modes |
 | `/mode` | Choose a permission mode |
+| `/session` | List, save, or load sessions |
+| `/loop` | Repeat a prompt on a schedule |
 | `/queue` | View or manage input held while the agent is busy |
-| `/btw` | Ask a quick side question in parallel without interrupting the agent |
-| `/review` | Run a one-shot review in readonly mode, then return to the previous prompt |
-| `/hooks` | Show whether a hook dispatcher is installed and its configuration |
-| `/advisor` | Show or change advisor status (enabled, mode, model, and maximum uses) |
+| `/btw` | Ask a read-only side question without interrupting the main agent |
+| `/review` | Run a one-shot review in read-only mode |
+| `/hooks` | Inspect hook dispatcher status and configuration |
+| `/advisor` | Inspect or change advisor settings |
+| `/clear` | Clear the conversation |
 
-Run `/help` to list all commands.
+## Configure and extend
 
-<details>
-<summary>Typing while the agent is busy</summary>
+The configuration file controls providers, models, permissions, MCP servers, hooks, and other settings. Run `/prompt autoconfig` for guided setup, or open [docs/CONFIG.md](docs/CONFIG.md) for the complete reference.
 
-Text entered during a run is held rather than sent immediately or used to start a concurrent run. When the current run finishes, queued lines are replayed as the next prompt. Each line is shown as `queued: <text>`.
+Tiny Crow also supports plain-text memory, per-project context, external lifecycle hooks, custom providers, MCP servers, subagents, Git worktrees, advisor workflows, and status signals. Explore the [architecture guide](docs/ARCHITECTURE.md) to understand how the pieces fit together.
 
-Use `/queue` to manage held input, including during a run:
+## Development
 
 ```bash
-/queue ls      # list pending inputs (bare /queue does the same)
-/queue clear   # clear all held input
-/queue pop     # drop the last queued input, undoing a mistyped line
+npm install
+npm run typecheck
+npm test
 ```
-
-Inputs beginning with `/`, `.`, or `!` are commands and cannot be queued as text. Wait for the run to finish or press Ctrl-C. Ctrl-C cancels the running agent, including child processes, and clears the queue.
-</details>
-
-<details>
-<summary>Side questions with /btw</summary>
-
-`/btw <message>` asks a side agent a quick question while the main agent continues. It forks the current context and uses four read-only tools (`read`, `grep`, `find_files`, `list_dir`); it cannot write files or run commands. The answer appears inline, is not added to conversation history, and its token usage is tracked separately in the status bar as `btw:…`.
-
-To point the question at a file, choose `/btw` from the command menu and type `@` to open the file picker. For example, choose `/btw`, select `@src/agent/runner.ts`, then ask “how does this work?” The command reads the selected file.
-</details>
-
-<details>
-<summary>Sessions on disk</summary>
-
-Sessions are stored in `$XDG_DATA_HOME/tiny-crow/sessions/` (override with `TC_DATA_DIR`). Resume the latest with `-c`, browse and choose one with `-r`, or load a specific session with `--session <id>`.
-</details>
-
----
-
-## Development scripts
 
 | Script | Purpose |
 | --- | --- |
-| `npm start` | Run the agent |
-| `npm run dev` | Restart on source file changes |
-| `npm run typecheck` | Strict typecheck with no output |
-| `npm run lint` | Lint via the typechecker |
-| `npm run check` | Alias for typecheck |
-| `npm test` | Run the `node:test` suite in `tests/` |
-| `npm run sync-version` | Report the version from `package.json` (the single source of truth) |
-| `npm run install-hook` | Install the pre-commit hook |
-| `npm run remove-hook` | Remove the pre-commit hook |
+| `npm start` | Start the agent |
+| `npm run dev` | Restart on source changes |
+| `npm run typecheck` | Run TypeScript checks |
+| `npm run lint` | Run the typechecker |
+| `npm test` | Run the test suite |
 
-There is no separate build system. Release-only recipes from the old setup (tagging, checksum updates for distro packages, and publishing) have no npm equivalent and were deliberately not carried over.
-
----
-
-## Configuration
-
-See [docs/CONFIG.md](docs/CONFIG.md) for configuration file locations, supported keys, provider aliases, permission rules, and MCP server setup.
-
-For guided setup, run `/prompt autoconfig` in a session. A specialised agent reads the documentation and adjusts your configuration.
-
----
+Tiny Crow has no separate build step. The `npm run check` command is an alias for `npm run typecheck`.
 
 ## Documentation
 
-| Document | Subject |
+| Guide | What it covers |
 | --- | --- |
-| [docs/GET_STARTED.md](docs/GET_STARTED.md) | Installation, model connection, and first session |
-| [docs/CONFIG.md](docs/CONFIG.md) | Configuration keys, types, and defaults |
-| [docs/COMMANDS.md](docs/COMMANDS.md) | Slash commands |
-| [docs/PROVIDERS.md](docs/PROVIDERS.md) | Providers, custom endpoints, key lookup, and caching |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Agent design and structure |
-| [docs/MEMORY.md](docs/MEMORY.md) | Memory, notes, and scratchpad |
-| [docs/SUBAGENTS.md](docs/SUBAGENTS.md) | Subagents and parallel work |
-| [docs/HASHEDIT.md](docs/HASHEDIT.md) | The hashedit edit system |
-| [docs/STATUS_SIGNALS.md](docs/STATUS_SIGNALS.md) | Status-bar and socket signals |
-| [docs/PUBLISHING_RELEASES.md](docs/PUBLISHING_RELEASES.md) | Publishing and releases |
-| [SECURITY.md](SECURITY.md) | Security policy |
-| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community code of conduct |
-| [AGENTS.md](AGENTS.md) | Repository contribution guidance |
+| [Getting started](docs/GET_STARTED.md) | Installation, provider setup, and your first session |
+| [Configuration](docs/CONFIG.md) | Configuration locations, keys, and defaults |
+| [Commands](docs/COMMANDS.md) | Slash commands and command-line options |
+| [Providers](docs/PROVIDERS.md) | Built-in and custom providers |
+| [Architecture](docs/ARCHITECTURE.md) | Agent design and repository structure |
+| [Memory](docs/MEMORY.md) | Memory, notes, and scratchpad |
+| [Subagents](docs/SUBAGENTS.md) | Delegation and parallel work |
+| [Hashedit](docs/HASHEDIT.md) | The hashedit edit system |
+| [Status signals](docs/STATUS_SIGNALS.md) | Unix socket events and integrations |
+| [Releases](docs/PUBLISHING_RELEASES.md) | Publishing and release workflow |
+| [Security policy](SECURITY.md) | Vulnerability reporting and security handling |
+| [Code of conduct](CODE_OF_CONDUCT.md) | Community standards |
+| [Repository guidance](AGENTS.md) | Contributor and coding-agent guidance |
 
----
+## Compatibility
+
+Tiny Crow requires Node.js 24 or later. Windows has not been tested; behaviour there is unknown.
 
 ## License
 
-GPL-3.0. See the full text in [LICENSE](LICENSE).
+Tiny Crow is licensed under the [MIT License](LICENSE).
