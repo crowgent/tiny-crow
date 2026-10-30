@@ -6,7 +6,7 @@
   "engines": {
     "node": ">=24"
   },
-  "license": "GPL-3.0",
+  "license": "MIT",
   "name": "tiny-crow",
   "scripts": {
     "check": "npm run typecheck",
