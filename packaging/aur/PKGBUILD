@@ -1,0 +1,41 @@
+# zerostack-ts: Node.js / TypeScript application package.
+# The source entry below is the 1.8.5 release source archive for this
+# package, placed alongside this PKGBUILD at publish time; its checksum
+# is verified by the publisher when the archive is published, so no
+# download location or checksum is invented here.
+# Runtime: Node.js >= 24, entry point node src/main.ts. No build step
+# beyond npm install (dev tooling) and the type check.
+
+pkgname=zerostack-ts
+pkgver=1.8.5
+pkgrel=1
+pkgdesc="Minimal coding agent TUI, ported to TypeScript"
+arch=('any')
+license=('GPL-3.0-only')
+depends=('nodejs>=24')
+makedepends=('npm')
+
+source=(
+    "zerostack-ts-${pkgver}.tar.gz"
+)
+
+sha256sums=('SKIP')
+
+build() {
+    cd "zerostack-ts-${pkgver}"
+    npm install
+    npm run typecheck
+}
+
+package() {
+    cd "zerostack-ts-${pkgver}"
+    install -dm755 "${pkgdir}/usr/share/zerostack-ts"
+    cp -r src data package.json package-lock.json node_modules README.md LICENSE "${pkgdir}/usr/share/zerostack-ts/"
+    install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+    install -dm755 "${pkgdir}/usr/bin"
+    cat > "${pkgdir}/usr/bin/zerostack-ts" <<'EOF'
+#!/bin/sh
+exec node /usr/share/zerostack-ts/src/main.ts "$@"
+EOF
+    chmod 755 "${pkgdir}/usr/bin/zerostack-ts"
+}

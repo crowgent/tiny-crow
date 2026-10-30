@@ -10,7 +10,7 @@ import {
 } from "./state.ts";
 
 /** Version string shown in the welcome banner (the TS port's own version; the package slice owns the canonical value). */
-export const ZEROSTACK_TS_VERSION = "0.1.0";
+export const ZEROSTACK_TS_VERSION = "1.8.5";
 
 const MONTHS = [
   "Jan",

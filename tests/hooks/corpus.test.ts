@@ -11,18 +11,8 @@ import type { HookCtx } from "../../src/extras/hooks/envelope.ts";
 // one case with three files: envelope.json (the event/tool_name/tool_input
 // to dispatch), hook.sh (the hook command, run for real via a subprocess),
 // and expected.json (the decision the dispatcher must produce). The corpus
-// lives in the read-only Rust source tree and is only read, never modified.
-const corpusDir = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "..",
-  "..",
-  "zerostack",
-  "src",
-  "tests",
-  "hooks",
-  "corpus",
-);
+// is local and self-contained in tests/hooks/corpus alongside this test.
+const corpusDir = join(dirname(fileURLToPath(import.meta.url)), "corpus");
 
 function ctx(): HookCtx {
   return {

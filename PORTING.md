@@ -36,10 +36,10 @@ npm test             # node --test tests/*.test.ts tests/hooks/*.test.ts
 
 `package.json` scripts also include `dev` (`node --watch src/main.ts`),
 `check` (alias of `typecheck`), `lint` (`tsc --noEmit`), and hook
-install/remove helpers converted from the original justfile. The original
-`install.sh` / `scripts/*.sh` / `justfile` / Nix / packaging files were
-converted into these npm scripts plus the install section in `README.md`;
-no Cargo, Nix, or Rust build files are shipped as the build system.
+install/remove helpers. The original `install.sh`, `scripts/*.sh`,
+`justfile`, Nix, and packaging files were first converted into npm
+scripts, and then restored in full adapted form — see "Restored
+folders (2026-10-30)" below. The build system is npm/Node, not Cargo.
 
 ## What was ported (behaviour)
 
@@ -314,3 +314,165 @@ Every non-test Rust file has exactly one TypeScript counterpart:
 | `src/ui/statusline.rs` | `src/ui/statusline.ts` |
 | `src/ui/terminal.rs` | `src/ui/terminal.ts` |
 | `src/ui/utils.rs` | `src/ui/utils.ts` |
+
+## Restored folders (2026-10-30) — missing-folder fix
+
+The first port covered `src/` and part of `data/` only. A second pass
+restored every other folder from the original, in adapted TS/Node form.
+Nothing in this section is Rust: no `cargo` commands, no Rust toolchain
+setup, no Rust binary packaging, no Rust internals or performance claims
+in the new docs/scripts/nix/packaging/workflows. Grep over all new
+files: `cargo` (word-boundary) = 0, `rust` (word-boundary) = 0, credits
+(Giuseppe / gi-dellav / dellavedova / ko-fi / rocketup / xavierforge /
+star-history) = 0, `TODO|FIXME|not-implemented` = 0. (A naive substring
+`rust` grep hits only the English word "trust" in docs.) The only
+`cargo`/`rust` mentions allowed in this file are in this mapping section
+itself, explaining what was replaced.
+
+### Per-folder restoration
+
+- `docs/` — 18 files (not 19: the original `docs/` holds 18 files; an
+  earlier count of 19 was a miscount): ARCHITECTURE.md, COMMANDS.md,
+  CONFIG.md, GET_STARTED.md, HASHEDIT.md, MEMORY.md, PROVIDERS.md,
+  PUBLISHING_RELEASES.md, STATUS_SIGNALS.md, SUBAGENTS.md, index.html,
+  template.html, robots.txt, providers/ApiRoute.md,
+  providers/CheaperInference.md, providers/Minimax.md,
+  providers/OpencodeZenGo.md, providers/Opper.md. Content ported
+  faithfully with cargo commands replaced by `node src/main.ts`,
+  `npm test`, `npm run typecheck`, product name `zerostack-ts`, and
+  credits stripped. Root `ARCHITECTURE.md` was rewritten from the
+  verified TS `src/` layout.
+- Root docs — 4 files: AGENTS.md (translated to Node 24: never claim a
+  change works without `npm test` + `tsc --noEmit`; tests for new
+  non-TUI code; update docs/ when needed; slash-picker rule kept),
+  ARCHITECTURE.md, CODE_OF_CONDUCT.md, SECURITY.md (reporting via the
+  repository Security tab / issue tracker, no personal contact emails).
+  Total docs restoration: 22 files, 5,392 lines.
+- `assets/` — 4 files copied byte-identical (md5-verified):
+  banner.png, logo.png, logo_rounded.png, tui_screenshot0.png.
+- `data/` — `data/session_export.html` copied byte-identical (the one
+  data file missed); prompts (16), themes (17), models.json, and
+  opencode-transports.json were already present and untouched.
+- `scripts/` — 4 TypeScript files, real logic, no shell copies:
+  gen-models-catalog.ts (347 lines, models.dev fetch, filters, sorted
+  output to `data/models.json` + `data/opencode-transports.json`),
+  setup-neovim.ts (370 lines), sync-version.ts (181 lines),
+  install.ts (303 lines). New npm scripts: `gen-models-catalog`,
+  `setup-neovim`, `sync-version` (replaced a previous no-op print stub),
+  `install-ts`. `tests/scripts.test.ts` adds 8 tests for the script
+  logic (suite total is now 1,144, up from 1,136).
+- Root installer + justfile — `install.sh` (27 lines, thin wrapper:
+  checks Node >= 24, then runs `scripts/install.ts`) and `justfile`
+  (163 lines, same recipe names where possible — test, check, run, fmt,
+  gen-models-catalog, setup-neovim, sync-version, install, release —
+  all node/npm/git/shell only; platform archive/checksum recipes are
+  intentionally absent because this port has no platform archives).
+- `nix/` + root nix files — 7 files: nix/overlay/default.nix,
+  nix/overlay/development.nix, nix/package/dev-shell.nix,
+  nix/package/zerostack.nix, default.nix, release.nix, shell.nix,
+  rewritten with nixpkgs `nodejs_24` (`npm install`, `npm test`,
+  wrapper running `node src/main.ts`), not cargo.
+- `packaging/` — 7 files: packaging/aur/PKGBUILD + .SRCINFO,
+  packaging/conda/zerostack/build.sh + meta.yaml,
+  packaging/conda/zerostack-bin/build.sh + meta.yaml,
+  packaging/homebrew/zerostack.rb, all installing the Node app
+  (`<prefix>/share/zerostack-ts` + `bin/zerostack-ts` wrapper running
+  `node src/main.ts`), version 1.8.5, `depends nodejs >= 24`.
+  Total nix + packaging: 14 files, 293 lines.
+- `.github/` — 7 files: ISSUE_TEMPLATE/bug_report.md,
+  ISSUE_TEMPLATE/feature_request.md, dependabot.yml (npm, not cargo),
+  workflows/ci.yml (Node 24, `npm ci`, `npm run typecheck`, `npm test`;
+  triggers main + `v*` tags + PRs preserved), workflows/pages.yml
+  (deploys `docs/`), workflows/release.yml (single Node tarball
+  release, no multi-target binaries), workflows/update-models.yml
+  (weekly, runs `node scripts/gen-models-catalog.ts`).
+- `tests/hooks/corpus/` — CRITICAL FIX: the 7 corpus cases (21 files:
+  envelope.json, expected.json, hook.sh each) copied verbatim from the
+  original `src/tests/hooks/corpus/` into `tests/hooks/corpus/`, and
+  `tests/hooks/corpus.test.ts` now points `corpusDir` at the local
+  directory (`join(dirname(fileURLToPath(import.meta.url)), "corpus")`)
+  with a "local and self-contained" comment. A clean copy of
+  zerostack-ts with no sibling zerostack directory now passes the
+  corpus test. (The brief's "8 cases / 24 files" was wrong; 7/21 is
+  what exists on disk, verified with `diff -r`.)
+
+### Mappings (build system)
+
+- `Cargo.toml` -> `package.json`, `Cargo.lock` -> `package-lock.json`
+  (already present; Cargo files are NOT recreated).
+- `scripts/*.sh` -> `scripts/*.ts` (same basenames, TypeScript logic).
+- `rust-toolchain.toml` -> no TS equivalent; intentionally absent.
+- `.cargo/config.toml` -> no TS equivalent; intentionally absent (it
+  only set a Rust linker, `cc`, and mold link flags for the Rust
+  build).
+- `tap/` -> intentionally absent: in the source clone it is an empty,
+  uninitialised submodule directory (0 files) pointing at a personal
+  tap repository URL. That URL is a personal credit and is NOT
+  recreated; `packaging/homebrew/zerostack.rb` is the Homebrew
+  equivalent.
+- `.gitmodules` -> intentionally absent for the same tap reason.
+
+### Full tree verification (2026-10-30, coordinator, not slice reports)
+
+Original: 325 files. Target after restoration: 324 files. Mapped
+comparison (src/*.rs -> src/*.ts, src/tests/*.rs ->
+tests/*.test.ts with `mod.rs` module declarations and the
+`fake_model`/`sandbox_support` helpers handled, scripts/*.sh ->
+scripts/*.ts, Cargo -> package files, corpus relocated to
+tests/hooks/corpus/): **zero gaps** except the three documented
+absences above (`.cargo/config.toml`, `.gitmodules`,
+`rust-toolchain.toml`) plus the tap/ empty directory. Target-only
+extras are PORTING.md, tsconfig.json, .gitignore, and
+scripts/install.ts.
+
+- `tsc --noEmit`: exit 0, zero errors.
+- `npm test`: **1,144 pass, 0 fail** (1,136 pre-existing + 8 new
+  scripts tests).
+- Clean-copy self-containment: zerostack-ts copied without `.git`
+  and `node_modules` to a clean directory (no sibling zerostack
+  directory there), then `npm ci` + `npm test` → **1,144 pass,
+  0 fail**. One caveat: when the clean copy lives directly under
+  `/tmp`, the suite is 1,143/1,144 — the single failure is a
+  pre-existing path-sensitive sandbox test
+  (`test_mask_root_containing_the_cwd_...` in
+  `tests/sandbox_mask.test.ts`): it takes `root = dirname(cwd)`,
+  which is `/tmp` there, and `/tmp` collides with the sandbox's
+  default `--tmpfs /tmp` mount, so the mask is counted twice. It
+  passes in the workspace and in a non-`/tmp` clean copy, and is
+  unrelated to this restoration or to the corpus fix (the corpus
+  test passes in both clean copies).
+- `sync-version --check`: exit 0. It syncs `package.json` version
+  1.8.5 into the three hardcoded version literals the program
+  actually reads (`src/cli.ts` CLI_VERSION, `src/logging.ts` VERSION,
+  `src/ui/events.ts` ZEROSTACK_TS_VERSION — the last was a 0.1.0
+  placeholder before this pass and is now 1.8.5).
+
+### Honest limits carried forward from this pass
+
+- Nix derivation and Homebrew formula are syntax-reviewed, not
+  `nix-build`/`brew`-executed (no `nix` or `ruby` binary on the VM).
+- No distribution URL/SHA-256 was invented: AUR uses
+  `sha256sums=('SKIP')`, conda uses the local source path, Homebrew
+  carries no `url`/`sha256` yet — the publisher must supply the real
+  archive location and checksum at publish time.
+- `justfile` was not executed (`just` is not installed on the VM);
+  its syntax was reviewed only.
+- The live `gen-models-catalog` fetch was not executed (to avoid
+  overwriting the committed `data/models.json` /
+  `data/opencode-transports.json` snapshots); its transformation
+  logic is covered by fixture tests. A full `setup-neovim` run was
+  not executed (it would write into `~/.config/nvim`); only
+  `--help`/arg validation was run.
+- `docs/CONFIG.md` deliberately omits the TS code's `rust-analyzer`
+  LSP default for editing Rust projects (example server is now
+  `typescript-language-server`) to satisfy the zero-`rust` rule in
+  new docs; the code default in `src/extras/lsp/registry.ts` is
+  unchanged. That is a docs-vs-code divergence to resolve by decision,
+  not a silent gap.
+- Pre-existing `src/` and `data/prompts/` content from the first port
+  still mentions cargo in a different sense (permission allowlists
+  for cargo as a tool the agent may run on user projects, and prompt
+  text describing other projects) — that is functional agent
+  behaviour, not this project's build steps, and was out of scope for
+  this restoration pass, whose zero-cargo rule covered the new
+  docs/scripts/nix/packaging/workflows only.

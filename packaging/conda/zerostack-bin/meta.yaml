@@ -1,0 +1,31 @@
+{% set name = "zerostack-ts-bin" %}
+{% set version = "1.8.5" %}
+
+package:
+  name: {{ name }}
+  version: {{ version }}
+
+source:
+  # Local application tree (the repository root, three levels above
+  # this recipe), installed as supplied without a build step. No
+  # download location is invented here.
+  path: ../../..
+
+build:
+  number: 0
+
+requirements:
+  build: []
+  host: []
+  run:
+    - nodejs >=24
+
+test:
+  commands:
+    - zerostack-ts --help
+    - zerostack-ts --version
+
+about:
+  summary: Minimal coding agent TUI, ported to TypeScript
+  license: GPL-3.0-only
+  license_file: LICENSE
