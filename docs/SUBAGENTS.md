@@ -2,7 +2,7 @@
 description: "Tiny-crow's parallel read-only subagents: configuration, the task tool, the tools they may use, and the code behind them."
 ---
 
-# Helpers that investigate without touching anything
+# Read-only subagents
 
 A subagent is a child agent that takes one narrow investigation and
 answers it, without touching anything. The main agent stays focused
@@ -14,7 +14,7 @@ Subagents ship in this build as an optional subsystem. The model
 and provider they use are configured through the options in
 CONFIG.md.
 
-## Configuring subagents, and which model they get
+## Configuration and model selection
 
 The settings, with their types and defaults:
 
@@ -48,7 +48,7 @@ the agent is running. A configuration example:
 {"task_max_turns":12,"task_enabled":true,"subagent_model":"gpt-5.4-mini","subagent_provider":"cheaper-inference"}
 ```
 
-## Calling one from the main agent
+## Invoke subagents with the `task` tool
 
 The main agent reaches subagents through a tool called `task`. It
 takes a list of prompts:
@@ -61,7 +61,7 @@ Give it one prompt and one subagent goes off and reports back.
 Give it several and they run side by side, each result arriving
 under a `## Task N:` heading in prompt order.
 
-## What a subagent is allowed to touch
+## Tool access and restrictions
 
 Reading tools, always present:
 
@@ -83,7 +83,7 @@ Tools kept out on purpose:
 - `memory_write` — a subagent must not persist memory.
 - `mcp_tool` — external and unpredictable, out of scope.
 
-## Why skipping permissions is safe for these agents
+## Permission model
 
 Every subagent tool carries `permission: None`, which means no
 permission prompt ever appears. That sounds loose until you notice
@@ -97,7 +97,7 @@ through the ordinary permission check (`check_perm("task", …)`),
 so your permission rules can allow, ask about, or deny spawning
 subagents.
 
-## Changing the subagent model mid-session
+## Change the model during a session
 
 - `/model-subagent` with nothing after it reports the subagent's
   current provider and model; give it a model name and the subagent
@@ -114,7 +114,7 @@ Both commands rewrite the global `SubagentConfig` while the agent
 runs, so the next `task` call automatically picks up the new
 settings.
 
-## How the pieces fit together
+## Runtime architecture
 
 The main agent holds the full toolset — read, write, edit, bash,
 grep, find_files, list_dir, todo, and the `task` tool itself. When
@@ -139,7 +139,7 @@ The code behind this, file by file:
 - `src/provider.ts` (`runSubagent`) — provider dispatch.
 - `src/main.ts` — setting up `SubagentConfig` at startup.
 
-## The prompt a subagent sees
+## Subagent system prompt
 
 A subagent gets its own system prompt
 (`src/extras/subagents/prompt.ts`), written around answering one
@@ -147,7 +147,7 @@ specific technical question. It tells the subagent to stay on the
 question it was given, use the tools it has, and report findings
 tightly, with no preamble and no wandering.
 
-## Parallel runs and failures
+## Parallel execution and failures
 
 When several prompts arrive together, each becomes its own
 concurrent task, and the results are gathered once every task has
@@ -156,7 +156,7 @@ the others keep going: the failed one's output shows the error
 while the rest complete normally. Results come back in the order
 of the original prompts.
 
-## Ask narrow questions, not open-ended ones
+## Write focused prompts
 
 Subagents shine on questions with a tight scope — something like
 "Which module handles invoice export?" A vague brief such as

@@ -2,7 +2,7 @@
 description: "How tiny-crow reports its run state to an outside observer over a Unix socket, and how a listener should read it."
 ---
 
-# Letting outside tooling watch a run
+# Status socket protocol
 
 Tiny Crow can narrate what it is doing to a supervisor — a status
 bar, a manager for parallel agents, or any other piece of tooling —
@@ -11,7 +11,7 @@ protocol is defined. `docs/CONFIG.md` and `README.md` point here
 rather than repeating the message list, so a protocol change only
 ever needs an edit in this file.
 
-## Switching the narration on
+## Enable signal emission
 
 Signals are present in this build, so no extra subsystem needs
 enabling. Pass `--status-socket <path>` on the command line and
@@ -25,7 +25,7 @@ tiny-crow connects, that write is dropped without a sound and the
 run carries on exactly as it would have without
 `--status-socket`.
 
-## One direction, one line, no retries
+## Transport and delivery guarantees
 
 Traffic flows in one direction only. Tiny Crow sends; the listener
 watches. Nothing comes back the other way, and delivery is
@@ -37,7 +37,7 @@ queues one for later.
 Each message is a single ASCII line, closed by one `\n`, sent on
 its own connect-write-close round trip.
 
-## The messages themselves
+## Message types
 
 - `start`, since v1.0: a turn has started.
 - `stop`, since v1.0: a turn has finished.
@@ -58,7 +58,7 @@ state, `working`. Other reasons and states — a `/chain` wait, a
 headless plan-reuse wait, or an `idle` state, for instance — are
 held back for later protocol versions and are not sent today.
 
-## The ordering a consumer may rely on
+## Ordering and invariants
 
 A permission wait is wrapped in an exact sequence, in this order:
 first `start`, then `blocked:permission`, then `state:working`,
@@ -87,7 +87,7 @@ turn, throw away every line that is not `start`, `stop`, or
 the same relative order, to the stream protocol v1.0 produced for
 that turn. That is the run-boundary invariant.
 
-## Writing a listener that survives new versions
+## Listener implementation guidance
 
 - Cut incoming bytes at `\n`; a message is everything up to and
   including each `\n`.
@@ -113,7 +113,7 @@ that turn. That is the run-boundary invariant.
   showing `working` for a little longer than the run actually
   lasted beats showing nothing at all.
 
-## Which run modes emit what
+## Signals by run mode
 
 - Interactive TUI: sends the v1.0 lines (`start`, `stop`,
   `git-conflict`) and also `blocked:permission` / `state:working`.
@@ -129,7 +129,7 @@ modes never send `blocked:permission` or its paired
 `state:working`. A consumer driving tiny-crow headlessly should
 not sit waiting for either line.
 
-## Who can listen, and what they can learn
+## Security and operational considerations
 
 Tiny Crow connects to whatever path `--status-socket` names. It
 never creates that path and never checks who is on the other end.
@@ -142,7 +142,7 @@ directory, never in a shared `/tmp`. Messages deliberately carry
 no session content, no tool names, no commands, and no prompt text,
 and future reasons must preserve that property.
 
-## How the protocol has grown
+## Protocol versions
 
 - Protocol v1.0, first shipped in tiny-crow v1.5.0, added
   `start`, `stop`, and `git-conflict`.

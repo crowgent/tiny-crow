@@ -1,4 +1,4 @@
-# Keeping the agent and your machine safe
+# Security and sandboxing
 
 Tiny Crow can place commands issued by the `bash` tool inside an
 isolated environment. It is opt-in: `--sandbox` on the command line, or
@@ -12,7 +12,7 @@ The sandbox is there to limit accidental damage from commands the
 model proposes. It is not a full security boundary against an
 adversary who controls the command being run.
 
-## Promises, graded
+## Sandbox guarantees and best-effort behaviour
 
 Two different contracts sit behind the same flags:
 
@@ -46,7 +46,7 @@ Neither setting alters the gaps listed below. `sandbox-required`
 guarantees the isolation is present, not that the isolation is
 complete.
 
-## What the sandbox never covers, whichever backend you pick
+## What the sandbox does not cover
 
 - **Sandboxing covers the `bash` tool and nothing else.** File reads
   and writes done by tiny-crow's own tools, MCP servers, hooks, and
@@ -66,7 +66,7 @@ complete.
   default behaviour, not something established by auditing its
   implementation.
 
-## How each backend behaves
+## Backend behaviour
 
 - `bwrap` (default): Linux only. The bubblewrap mounts and namespaces
   described below, with the host network left open unless
@@ -88,7 +88,7 @@ complete.
   directly as your user with no isolation at all. The permission
   system is the only gate.
 
-## The default `bwrap` view of the machine
+## Default `bwrap` environment
 
 A command running under the default backend finds:
 
@@ -117,7 +117,7 @@ openable per domain. Tiny Crow calls it as
 to the working directory is the single opening tiny-crow makes in that
 policy; the rest follows zerobox's own defaults.
 
-## Gaps to know about before you lean on the sandbox
+## Sandbox limitations
 
 Most of these follow from how tiny-crow configures the default `bwrap`
 backend; the final group holds whichever backend you pick.
@@ -258,7 +258,7 @@ for untrusted code. If a genuine boundary is what you need, run
 tiny-crow itself inside a VM or a container, with only the network and
 credentials you are prepared to expose.
 
-## How to report a flaw privately
+## Reporting a vulnerability privately
 
 Security issues go through private channels only: use the repository's
 Security tab ("Report a vulnerability"). A vulnerability must never be

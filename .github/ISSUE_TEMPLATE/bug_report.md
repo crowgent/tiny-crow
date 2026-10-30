@@ -7,25 +7,24 @@ assignees: ''
 
 ---
 
-**Observed behaviour**
-Say what went wrong, as precisely as you can manage.
+## Observed behaviour
+Describe what went wrong as precisely as you can.
 
-**Steps that trigger it**
+## Steps to reproduce
 1. Begin with '...'
 2. Next run '....'
 3. Watch for the failure
 
-**Expected behaviour**
-Say what you thought would happen instead.
+## Expected behaviour
+Describe what you expected to happen instead.
 
-**Setup**
+## Setup
 - Operating system:
 - LLM provider and model:
 - Version (run `tiny-crow --version` and paste the output):
 
-**Evidence**
-If a screenshot or a log excerpt would make the problem clearer,
-attach it here.
+## Evidence
+Attach a screenshot or log excerpt if it helps clarify the problem.
 
-**Extra context**
-Anything else that could help pin the problem down.
+## Additional context
+Include anything else that could help identify the problem.

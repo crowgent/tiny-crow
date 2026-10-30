@@ -2,7 +2,9 @@
 description: "Choosing and configuring a tiny-crow model backend: built-ins, custom OpenAI-compatible endpoints, key lookup, transports, and caching."
 ---
 
-# Choosing a model backend
+# Model providers
+
+Use this guide to select a built-in backend or configure a custom OpenAI-compatible endpoint. Provider-specific setup is collected in the [provider recipes](#provider-recipes).
 
 Tiny Crow can talk to seven backends out of the box, and anything
 else that speaks the OpenAI wire format can be added as a custom
@@ -10,7 +12,7 @@ provider. This page covers choosing one, pointing the agent at your
 own endpoint, how a key is found, the two OpenAI transports, and
 how prompt caching behaves on each backend.
 
-## Flags and variables for picking a backend
+## Select a provider and model
 
 Three routes lead to the same choice: a line in the config file, a
 command-line flag, or an environment variable. The flag and the
@@ -38,7 +40,7 @@ The full set, as flags paired with variables and meanings:
 - `--temperature` — model temperature (0.0–2.0).
 - `--max-agent-turns` — maximum agent turns per response.
 
-## The backends that ship with the agent
+## Built-in providers
 
 - OpenRouter, config name `openrouter`, key variable
   `OPENROUTER_API_KEY` by default.
@@ -54,7 +56,7 @@ The full set, as flags paired with variables and meanings:
 - OpenCode Go, config name `opencode-go`, key variable
   `OPENCODE_API_KEY`.
 
-## Recipes for particular services
+## Provider recipes
 
 Some services need more than a key and a name. Step-by-step
 recipes live in their own pages: ApiRoute in
@@ -63,7 +65,7 @@ providers/CheaperInference.md, MiniMax in providers/Minimax.md,
 OpenCode Zen / Go in providers/OpencodeZenGo.md, and Opper in
 providers/Opper.md.
 
-## Pointing the agent at your own endpoint
+## Configure a custom endpoint
 
 A custom provider is how you reach a vLLM server, a LiteLLM proxy,
 a local model, an enterprise gateway, or any other OpenAI-compatible
@@ -102,7 +104,7 @@ Every field you can set on a custom provider, and what it means:
   provider, used when no model is given through `--model` or
   `TC_MODEL`.
 
-## Letting the endpoint report its own limits
+## Context limits and pricing discovery
 
 For a custom provider, tiny-crow asks the endpoint itself what it
 supports. It reads `GET {base_url}/models` and, when the listing
@@ -115,7 +117,7 @@ the discovered value by setting `context_window` in the config (or
 on a single quick model); a configured value always beats live
 discovery.
 
-## Putting secrets into headers without writing them down
+## Expand environment variables in headers
 
 Header values can pull in environment variables with `${VAR}`
 syntax, so a secret never has to sit in the config file itself.
@@ -130,7 +132,7 @@ written as:
 {"headers":{"cf-access-client-id":"${CF_ACCESS_CLIENT_ID}","cf-access-client-secret":"${CF_ACCESS_CLIENT_SECRET}"}}
 ```
 
-## Where a key comes from
+## API key lookup order
 
 When tiny-crow needs an API key, it looks in this order, taking the
 first value it finds:
@@ -149,7 +151,7 @@ Keys kept in the config file look like this:
 {"api_keys":{"openai":"sk-...","anthropic":"sk-ant-..."}}
 ```
 
-## Two ways OpenAI traffic can travel
+## OpenAI API transports
 
 The OpenAI provider can speak two transports:
 
@@ -164,7 +166,7 @@ To force one or the other, set `api_style: "responses"` or
 `api_style: "completions"` on a custom provider, or set `api_style`
 on the built-in OpenAI provider.
 
-## Prompt caching, backend by backend
+## Prompt caching by backend
 
 Tiny Crow turns prompt caching on automatically wherever the
 underlying provider client can do it. What happens next depends on

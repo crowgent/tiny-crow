@@ -2,7 +2,7 @@
 description: "Getting MiniMax into tiny-crow across its two regions and two API shapes, with prices and local cost shortcuts."
 ---
 
-# MiniMax across regions and transports
+# Configure MiniMax across regions and transports
 
 There is no built-in MiniMax entry, so you declare it yourself as a
 custom provider. One key unlocks four combinations: two regions
@@ -10,7 +10,7 @@ custom provider. One key unlocks four combinations: two regions
 Anthropic-shaped). Every combination below draws on the same
 environment variable, so you only ever manage a single secret.
 
-## What the models cost and carry
+## Model capabilities and pricing
 
 Prices here are US dollars per million tokens, and they describe
 the standard tier unless a tier is named.
@@ -35,7 +35,7 @@ context you actually use:
 - Priority tier, over 512,000 tokens: $0.90 in, $3.60 out, $0.18
   cache read.
 
-## The four routes, side by side
+## Available routes
 
 - Global plus OpenAI shape: endpoint `https://api.minimax.io/v1`,
   provider name `minimax-global-openai`.
@@ -53,7 +53,7 @@ because the Anthropic client appends `/v1/messages` itself. If you
 put `/v1` into one of those URLs, the finished path comes out
 wrong and requests fail.
 
-## Wiring it up
+## Configure the API key and routes
 
 Put the secret in the shell, never in the configuration file:
 
@@ -101,7 +101,7 @@ tiny-crow --provider minimax-global-anthropic --model MiniMax-M2.7
 tiny-crow --provider minimax-cn-anthropic --model MiniMax-M3
 ```
 
-## Shortcuts that carry the local cost estimate
+## Quick models and local cost estimates
 
 The entries below bake the standard tier's full-window figures
 into tiny-crow's own cost estimate, so the status line and usage

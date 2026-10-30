@@ -2,7 +2,7 @@
 description: "Using Opper's EU-hosted gateway from tiny-crow over its OpenAI and Anthropic transports."
 ---
 
-# Opper as a gateway in front of many models
+# Configure Opper as a model gateway
 
 Opper fronts more than 700 models from over 50 providers behind a
 single OpenAI-compatible API, and it is hosted in the EU.
@@ -10,7 +10,7 @@ Tiny-crow reaches it only through custom provider entries, with the
 transport kept explicit and one `OPPER_API_KEY` variable shared
 between the two routes.
 
-## How model names resolve: pools, not single models
+## Model IDs and routing pools
 
 A bare name such as `claude-sonnet-4-6` does not point at one
 provider's deployment. It names a pool, and Opper picks the route
@@ -26,7 +26,7 @@ Two models with pinned local context windows are worth knowing:
 - `claude-sonnet-4-6` with a 1,000,000-token window.
 - `gemini-3.8-flash` with a 1,048,576-token window.
 
-## The two routes and their shared secret
+## Configure the API key and routes
 
 Create a key at https://platform.opper.ai and export it in your
 shell, keeping it out of the config file:
@@ -65,7 +65,7 @@ tiny-crow --provider opper --model claude-sonnet-4-6
 tiny-crow --provider opper-anthropic --model gemini-3.8-flash
 ```
 
-## Shortcuts that pin the context window
+## Quick models and context windows
 
 These entries fix the window for each model so tiny-crow does not
 have to guess it:

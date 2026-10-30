@@ -2,14 +2,14 @@
 description: "Connecting tiny-crow to API Route's gateway as a custom OpenAI-compatible provider, including its model catalogue."
 ---
 
-# Reaching API Route's gateway
+# Configure API Route
 
 API Route gathers models from several families behind one
 OpenAI-compatible gateway. Tiny-crow ships no built-in entry for
 it, so you declare it yourself as a custom provider aimed at the
 gateway's worldwide Chat Completions endpoint.
 
-## Discover the catalogue before you settle on a model
+## Discover available models
 
 The block further down names the model ID `gpt-6.1-sol` exactly as
 the gateway spells it, but do not take that id on trust: ask the
@@ -24,7 +24,7 @@ Pass any ID from that listing to `--model` unchanged. Appearing in
 the catalogue is not a promise that the model is currently servable
 for inference.
 
-## Key first, config second
+## Configure the API key and provider
 
 Grab a key from your [API Route account](https://api-route.com)
 and export it in your shell. Keeping it out of the config file
@@ -66,7 +66,7 @@ And prove the wiring works with a tiny, tool-free round trip:
 tiny-crow --provider api-route --model gpt-6.1-sol --no-tools --max-tokens 32 -p "Reply with exactly yes."
 ```
 
-## A gap in the catalogue data, and how to work around it
+## Context and pricing metadata limitation
 
 API Route's listing does not yet carry the OpenRouter-style
 `context_length` and `pricing` fields that tiny-crow normally
