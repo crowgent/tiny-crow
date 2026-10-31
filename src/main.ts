@@ -4,7 +4,7 @@ import { load } from "./config/load.ts";
 import { printConfig, printSessions } from "./print.ts";
 import { showGetStarted, ensureGlobal } from "./docs.ts";
 import { Startup } from "./startup.ts";
-import { runCrowSetupMode } from "./crowtui/app.ts";
+import { runPituiSetupMode } from "./pitui/app.ts";
 
 export async function run(): Promise<void> {
   const cli = parseCli();
@@ -104,7 +104,7 @@ export async function run(): Promise<void> {
     } catch (e) {
       if (isInteractive && e instanceof Error && e.message.includes("No API key found") && setupRounds < 3) {
         setupRounds++;
-        const ready = await runCrowSetupMode();
+        const ready = await runPituiSetupMode();
         if (!ready) return;
         const reloaded = load();
         cfg = reloaded[0];
@@ -146,7 +146,7 @@ export async function run(): Promise<void> {
     } catch (e) {
       if (isInteractive && e instanceof Error && e.message.includes("No API key found") && setupRounds < 3) {
         setupRounds++;
-        const ready = await runCrowSetupMode();
+        const ready = await runPituiSetupMode();
         if (!ready) return;
         const reloaded = load();
         cfg = reloaded[0];

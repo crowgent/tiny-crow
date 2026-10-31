@@ -1131,18 +1131,18 @@ export class Startup {
     let appMod: Record<string, unknown>;
     try {
       stateMod = (await import("./ui/state.ts")) as Record<string, unknown>;
-      appMod = (await import("./crowtui/app.ts")) as Record<string, unknown>;
+      appMod = (await import("./pitui/app.ts")) as Record<string, unknown>;
     } catch (e) {
-      throw new Error(`ui slice not available (./ui/state.ts, ./crowtui/app.ts): ${e}`);
+      throw new Error(`ui slice not available (./ui/state.ts, ./pitui/app.ts): ${e}`);
     }
     const UiContext = stateMod["UiContext"] as
       | (new (opts: Record<string, unknown>) => unknown)
       | undefined;
-    const App = appMod["CrowApp"] as
+    const App = appMod["PituiApp"] as
       | { create: (opts: Record<string, unknown>) => Promise<{ run: () => Promise<void> }> }
       | undefined;
     if (!UiContext || !App) {
-      throw new Error("ui slice does not export UiContext / CrowApp.create");
+      throw new Error("ui slice does not export UiContext / PituiApp.create");
     }
     const uiContext = new UiContext({
       cli: this.cli,

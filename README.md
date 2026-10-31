@@ -237,3 +237,11 @@ Tiny Crow requires Node.js 24 or later. Windows has not been tested; behaviour t
 ## License
 
 Tiny Crow is licensed under the [MIT License](LICENSE).
+
+## TUI credit
+
+The terminal UI in `src/pitui/` is based on and adapted from the TUI library
+in [earendil-works/pi](https://github.com/earendil-works/pi/tree/main/packages/tui)
+(`packages/tui`), used under its MIT License (Copyright (c) 2025 Mario Zechner).
+The full license text is kept in [`src/pitui/LICENSE`](src/pitui/LICENSE), and
+the original third-party notices inside that code are retained there.
