@@ -9,7 +9,7 @@ import {
   type PermissionConfigs,
   type ToolPerm,
 } from "../src/permission/mod.ts";
-import { suggestPattern } from "../src/ui/utils.ts";
+import { suggestPattern } from "../src/ui/helpers.ts";
 import { checkPerm, checkPermPath } from "../src/agent/tools/mod.ts";
 
 function defaultModes(): string[] {

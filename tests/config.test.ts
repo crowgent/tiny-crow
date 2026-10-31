@@ -26,7 +26,6 @@ import {
   toToml,
   unknownKeys,
 } from "../src/config/load.ts";
-import { contextExhaustedReport } from "../src/ui/mod.ts";
 
 function customProvider(providerType: string): CustomProviderConfig {
   return {
@@ -101,19 +100,6 @@ test("show_reasoning_can_be_disabled", () => {
   const cfg = defaultConfig();
   cfg.showReasoning = false;
   assert.ok(!resolveShowReasoning(cfg));
-});
-
-test("context_exhausted_report_math", () => {
-  const lines = contextExhaustedReport(18000, 0.8, 20000, 8192, 6000);
-  const joined = lines.join("\n");
-  assert.ok(joined.includes("context window .............. 20000 tokens"), joined);
-  assert.ok(joined.includes("16000 tokens  (80% of window)"), joined);
-  assert.ok(joined.includes("18000 tokens  (90% of window)"), joined);
-  assert.ok(joined.includes("overflow above ceiling ...... 2000 tokens"), joined);
-  assert.ok(joined.includes("reserved for response ....... 8192 tokens"), joined);
-  assert.ok(joined.includes("kept-recent budget .......... 6000 tokens"), joined);
-  assert.ok(joined.includes("raise mid_turn_compact_threshold above 90%"), joined);
-  assert.ok(joined.includes("hold 18000+ tokens"), joined);
 });
 
 test("catalog_context_window_reads_known_model", () => {

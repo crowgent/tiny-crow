@@ -1,5 +1,3 @@
-import { BlockStyle, type Feed } from "./feed.ts";
-import type { Renderer } from "./renderer.ts";
 import {
   resolveModel,
   resolveShowToolDetails,
@@ -8,6 +6,31 @@ import {
   type ContextFiles,
   type Session,
 } from "./state.ts";
+
+export const BlockStyle = {
+  User: "user",
+  Agent: "agent",
+  Reasoning: "reasoning",
+  Tool: "tool",
+  ToolResult: "tool_result",
+  Error: "error",
+  System: "system",
+  Welcome: "welcome",
+  Permission: "permission",
+  Plain: "plain",
+} as const;
+
+export type BlockStyle = (typeof BlockStyle)[keyof typeof BlockStyle];
+
+export interface Feed {
+  pushLine(style: BlockStyle, text: string): void;
+  pushBlock(style: BlockStyle, text: string): void;
+}
+
+export interface Renderer {
+  clearContent(): void;
+  feedMut(): Feed;
+}
 
 export const TINY_CROW_VERSION = "1.8.5";
 

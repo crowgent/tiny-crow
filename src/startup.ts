@@ -1131,9 +1131,9 @@ export class Startup {
     let appMod: Record<string, unknown>;
     try {
       stateMod = (await import("./ui/state.ts")) as Record<string, unknown>;
-      appMod = (await import("./pitui/app.ts")) as Record<string, unknown>;
+      appMod = (await import("./ui/app.ts")) as Record<string, unknown>;
     } catch (e) {
-      throw new Error(`ui slice not available (./ui/state.ts, ./pitui/app.ts): ${e}`);
+      throw new Error(`ui slice not available (./ui/state.ts, ./ui/app.ts): ${e}`);
     }
     const UiContext = stateMod["UiContext"] as
       | (new (opts: Record<string, unknown>) => unknown)

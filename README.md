@@ -240,8 +240,8 @@ Tiny Crow is licensed under the [MIT License](LICENSE).
 
 ## TUI credit
 
-The terminal UI in `src/pitui/` is based on and adapted from the TUI library
+The terminal UI in `src/ui/` is based on and adapted from the TUI library
 in [earendil-works/pi](https://github.com/earendil-works/pi/tree/main/packages/tui)
 (`packages/tui`), used under its MIT License (Copyright (c) 2025 Mario Zechner).
-The full license text is kept in [`src/pitui/LICENSE`](src/pitui/LICENSE), and
+The full license text is kept in [`src/ui/LICENSE`](src/ui/LICENSE), and
 the original third-party notices inside that code are retained there.

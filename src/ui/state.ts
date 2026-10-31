@@ -143,8 +143,21 @@ export interface ColorsConfig {
   roles?: Record<string, string>;
 }
 
+export type StatusLineIconSpec = { kind: "auto"; value: boolean } | { kind: "custom"; value: string };
+
+export interface StatusLineSegment {
+  item: string;
+  color?: string;
+  bg?: string;
+  text?: string;
+  left?: string;
+  right?: string;
+  icon?: StatusLineIconSpec;
+  always?: boolean;
+}
+
 export interface StatusLineConfigLike {
-  lines: { segments: import("./statusline.ts").StatusLineSegment[] }[];
+  lines: { segments: StatusLineSegment[] }[];
 }
 
 export interface ChainConfig {

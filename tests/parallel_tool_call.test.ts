@@ -8,7 +8,6 @@ import {
   type StreamItem,
 } from "../src/agent/runner.ts";
 import { Session } from "../src/session/mod.ts";
-import { resolveToolResultCallId } from "../src/ui/event_handler.ts";
 import { AgentRunState } from "../src/ui/state.ts";
 
 async function* twoCallStream(): AsyncIterable<StreamItem> {
@@ -125,30 +124,4 @@ test("clearing_drops_calls_stranded_by_a_teardown", () => {
   assert.equal(run.takePendingToolCall("call-1"), null);
 
   assert.equal(run.newestPendingToolCall(), null);
-});
-
-test("an_unmatched_tool_result_gets_its_own_call_instead_of_call_zero", () => {
-  const session = Session.create("anthropic", "claude-test", 200000, "");
-  const run = new AgentRunState();
-
-  const realCall = session.addToolCall("read", { path: "a.txt" });
-  assert.equal(realCall, 0);
-  run.pushPendingToolCall("call-1", realCall);
-  const orphan = resolveToolResultCallId(run, session as never, "call-ghost", "grep");
-  assert.notEqual(orphan, realCall);
-  session.addToolResult(orphan, "grep", "no matches");
-  
-  const calls = session.messages
-    .map((m) => m.tool)
-    .filter((t) => t !== undefined && t.kind === "call");
-  assert.equal(calls.length, 2);
-  const first = calls[0]!;
-  assert.ok(first.kind === "call" && first.id === realCall && first.name === "read");
-  assert.ok(first.kind === "call" && JSON.stringify(first.args) === JSON.stringify({ path: "a.txt" }));
-
-  const second = calls[1]!;
-  assert.ok(second.kind === "call" && second.id === orphan && second.name === "grep");
-  assert.ok(second.kind === "call" && second.args === null);
-  
-  assert.equal(run.takePendingToolCall("call-1"), realCall);
 });

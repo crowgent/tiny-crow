@@ -28,7 +28,6 @@ import {
   type DeferredWorktreeAction,
   type WorktreeInfo,
 } from "../src/extras/git_worktree/mod.ts";
-import { resolveAgentMergeOutcome } from "../src/ui/event_handler.ts";
 import type { WtReturn } from "../src/ui/state.ts";
 
 let counter = 0;
@@ -554,12 +553,6 @@ test("auto_commit_round_trip", () => {
   } finally {
     repo.dispose();
   }
-});
-
-test("resolve_agent_merge_outcome_messages", () => {
-  const ret: WtReturn = { mainPath: "/m", wtPath: "/w", branch: "b", target: "main", force: false };
-  const msg = resolveAgentMergeOutcome(ret);
-  assert.ok(msg.includes("b"));
 });
 
 test("deferred_action_display", () => {

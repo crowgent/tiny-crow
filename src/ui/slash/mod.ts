@@ -1,4 +1,3 @@
-import type { InputEditor } from "../input/mod.ts";
 import { handle as handleAdd } from "./add.ts";
 import { handle as handleContent } from "./content.ts";
 import { handle as handleFeatures } from "./features.ts";
@@ -288,7 +287,7 @@ export interface SlashCtxInit {
   showReasoning?: boolean;
   reasoningEnabled?: boolean;
   isRunning?: boolean;
-  input: InputEditorLike | InputEditor;
+  input: InputEditorLike;
   permission?: PermissionLike;
   askTx?: unknown;
   todoToolsEnabled?: boolean;
@@ -382,7 +381,7 @@ export class SlashCtx {
   showReasoning: boolean;
   reasoningEnabled: boolean;
   isRunning: boolean;
-  input: InputEditorLike | InputEditor;
+  input: InputEditorLike;
   permission?: PermissionLike;
   askTx?: unknown;
   todoToolsEnabled: boolean;

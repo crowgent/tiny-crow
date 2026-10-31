@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { centerText, crowBannerLines, centeredBanner } from "../src/pitui/banner.ts";
-import { slashCandidates, pickerWindow, SLASH_COMMANDS, PROVIDER_NAMES, slashDescription } from "../src/pitui/slash.ts";
-import { setupReadyFromConfig, providerKeyState } from "../src/pitui/adapter.ts";
-import { windowPanelRows, maskedDisplay, PanelView, MaskedView, splitKeys } from "../src/pitui/panel.ts";
+import { centerText, crowBannerLines, centeredBanner } from "../src/ui/banner.ts";
+import { slashCandidates, pickerWindow, SLASH_COMMANDS, PROVIDER_NAMES, slashDescription } from "../src/ui/slash.ts";
+import { setupReadyFromConfig, providerKeyState } from "../src/ui/adapter.ts";
+import { windowPanelRows, maskedDisplay, PanelView, MaskedView, splitKeys } from "../src/ui/panel.ts";
 
 test("pitui_banner_has_big_crow_art", () => {
   const lines = crowBannerLines();
@@ -220,4 +220,43 @@ test("pitui_panel_view_arrows_and_escape", () => {
   };
   escView.handleInput("\x1b");
   assert.equal(escSelected, null);
+});
+import { parseColor, displayWidth } from "../src/ui/helpers.ts";
+import { showWelcome } from "../src/ui/events.ts";
+
+test("helpers_parse_color_light_blue_and_unknown", () => {
+  assert.deepEqual(parseColor("light_blue"), { kind: "rgb", r: 0x5f, g: 0xaf, b: 0xff });
+  assert.equal(parseColor("red"), "red");
+  assert.equal(parseColor("not_a_color"), null);
+});
+
+test("helpers_display_width_ascii_and_wide", () => {
+  assert.equal(displayWidth(""), 0);
+  assert.equal(displayWidth("abc"), 3);
+  assert.equal(displayWidth("aé"), 2);
+  assert.equal(displayWidth("中"), 2);
+});
+
+test("events_show_welcome_writes_quickstart_to_feed", () => {
+  const lines: Array<[string, string]> = [];
+  const feed = {
+    pushLine: (style: string, text: string) => {
+      lines.push([style, text]);
+    },
+    pushBlock: (style: string, text: string) => {
+      lines.push([style, text]);
+    },
+  };
+  const renderer = {
+    clearContent: () => undefined,
+    feedMut: () => feed,
+  };
+  showWelcome(renderer as never, false);
+  const texts = lines.map(([, text]) => text);
+  assert.ok(texts.some((text) => text.includes("tiny-crow Quickstart")));
+  assert.ok(texts.some((text) => text.includes("File picker")));
+  assert.ok(!texts.some((text) => text.includes("lazygit")));
+  lines.length = 0;
+  showWelcome(renderer as never, true);
+  assert.ok(lines.map(([, text]) => text).some((text) => text.includes("lazygit")));
 });

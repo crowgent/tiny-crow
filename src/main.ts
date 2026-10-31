@@ -4,7 +4,7 @@ import { load } from "./config/load.ts";
 import { printConfig, printSessions } from "./print.ts";
 import { showGetStarted, ensureGlobal } from "./docs.ts";
 import { Startup } from "./startup.ts";
-import { runPituiSetupMode } from "./pitui/app.ts";
+import { runPituiSetupMode } from "./ui/app.ts";
 
 export async function run(): Promise<void> {
   const cli = parseCli();

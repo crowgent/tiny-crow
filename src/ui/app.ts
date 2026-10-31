@@ -1,1652 +1,1247 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { dirname, join } from "node:path";
-import {
-  ensureAgent,
-  estimateOverhead,
-  handleAgentEvent as handleAgentEventInner,
-} from "./event_handler.ts";
-import { renderSession, sanitizeOutput, showWelcome } from "./events.ts";
-import { handlePermissionRequest } from "./permission_handler.ts";
-import {
-  initStatusline,
-  lineCount,
-  needsGitStatus,
-} from "./statusline.ts";
-import { BlockStyle } from "./feed.ts";
-import {
-  copyToClipboard,
-  openUrl,
-  Renderer,
-  StringBackend,
-  type RenderBackend,
-} from "./renderer.ts";
-import { C_AGENT, C_BTW, C_ERROR, C_TOOL } from "./roles.ts";
 import {
   AgentRunState,
-  BtwStats,
   ChainState,
   EventQueue,
   SlashState,
-  UiContext,
-  quickModelsMap,
-  resolveAlwaysShowWelcome,
-  resolveChatLeftMargin,
-  resolveMouseCapture,
-  resolveShowCostAlways,
+  billableInputTokens,
+  configIsAnthropicNative,
+  estimateCost,
   resolveShowReasoning,
   type AgentEvent,
-  type AnyAgent,
   type AskRequest,
   type BtwEvent,
-  type ChainPhaseFromPrompt,
-  type KeyEvent,
-  type UserEvent,
+  type UiContext,
 } from "./state.ts";
-import { parseEditorCommand, suspendTui, TerminalGuard } from "./terminal.ts";
+import { parseEditorCommand } from "./host-terminal.ts";
+import { suggestPattern } from "./helpers.ts";
+import { centeredBanner, setupGuideLines, welcomeHintLines } from "./banner.ts";
+import { SLASH_COMMANDS, PROVIDER_NAMES, pickerWindow, slashCandidates, slashDescription } from "./slash.ts";
+import { MaskedView, PanelView, type PanelItem } from "./panel.ts";
 import {
-  applyPromptMode,
-  classifySubmission,
-  parsePromptMode,
-  midTurnCompactAndRespawn,
-  refreshDisplay,
-  spawnEventThread,
-  startMainRun as startMainRunFromMod,
-  stopTurnContextExhausted,
-} from "./mod.ts";
-import { formatToolCallSummary } from "./utils.ts";
+  applyTheme,
+  listPromptNames,
+  listSessionFiles,
+  listThemeNames,
+  loadSetupCfg,
+  providerEnvName,
+  providerKeyState,
+  setupReadyFromConfig,
+  type ConfigLike,
+} from "./adapter.ts";
+import { catalogEntries } from "../models_catalog.ts";
+import { saveConfig } from "../config/load.ts";
+import type { Config } from "../config/mod.ts";
+import { TuiMainScreen } from "./tui-main-screen.ts";
+import { ProcessTerminal } from "./terminal.ts";
+import { Text } from "./components/text.ts";
+import { VStack } from "./components/v-stack.ts";
+import { Input } from "./components/input.ts";
+import type { Component } from "./tui.ts";
 
-export interface PickerLike {
-  active(): boolean;
-  draw(): void;
+export type PituiSlashHandler = (
+  text: string,
+  ctx: Record<string, unknown>,
+) => Promise<Record<string, unknown>>;
+
+export interface PituiAppOptions {
+  ui: UiContext;
+  autoTriggerMsg?: string | null;
+  slashHandler?: PituiSlashHandler | null;
+  askEvents?: import("./state.ts").EventQueue<AskRequest> | null;
 }
 
-export interface InputEditorLike {
-  buffer: string;
-  cursor: number;
-  picker: PickerLike | null;
-  setCursor(pos: number): void;
-  clearBuffer(): void;
-  loadText(text: string): void;
-  handleKey(key: KeyEvent): string | null;
-  handlePaste(data: string): void;
-  handlePickerKey(key: KeyEvent): boolean;
-  takeRewindOutcome(): { kind: "confirmed"; idx: number } | null;
-  takeSwitcheroOutcome():
-    | { kind: "model"; name: string }
-    | { kind: "prompt"; name: string }
-    | { kind: "cancelled" }
-    | null;
-  switcherKind(): string | null;
-  setMonochrome(v: boolean): void;
-  setMouseCapture(v: boolean): void;
-  setPromptNames(names: string[]): void;
-  setThemeNames(names: string[]): void;
-  setEditor(editor: string): void;
-  setQuickModelNames(names: string[]): void;
-  setProviderNames(names: string[]): void;
-  setLiveModelNames(names: string[]): void;
-  loadGlobalHistory(): void;
-  startDotPicker(): void;
-  startModelSwitcher(
-    quick: string[],
-    live: string[],
-    details: Map<string, string>,
-    currentQuick: string | null,
-    currentModel: string,
-  ): void;
-  startPromptSwitcher(
-    items: string[],
-    details: Map<string, string>,
-    current: string | null,
-  ): void;
-  openInEditor(): void;
+function singleLine(text: string, max: number): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  if (flat.length <= max) return flat;
+  return `${flat.slice(0, max - 3)}...`;
 }
 
-type SwitcherOutcome =
-  | { kind: "model"; name: string }
-  | { kind: "prompt"; name: string }
-  | { kind: "cancelled" };
-
-class ListPicker implements PickerLike {
-  private items: string[];
-  private selected = 0;
-  private kind: "model" | "prompt" | "dot";
-  private editor: SimpleInputEditor;
-  private done = false;
-
-  constructor(
-    kind: "model" | "prompt" | "dot",
-    items: string[],
-    editor: SimpleInputEditor,
-    current: string | null,
-  ) {
-    this.kind = kind;
-    this.items = items;
-    this.editor = editor;
-    if (current !== null) {
-      const idx = items.indexOf(current);
-      if (idx >= 0) this.selected = idx;
-    }
-  }
-
-  active(): boolean {
-    return !this.done;
-  }
-
-  draw(): void {
-    const lines = this.items.map((item, i) =>
-      i === this.selected ? `> ${item}` : `  ${item}`,
-    );
-    try {
-      process.stdout.write(`\n${lines.join("\n")}\n`);
-    } catch {
-
-    }
-  }
-
-  handleKey(key: KeyEvent): boolean {
-    if (key.code === "up" || (key.code === "char" && key.ch === "k" && !key.ctrl)) {
-      this.selected = Math.max(0, this.selected - 1);
-      return true;
-    }
-    if (key.code === "down" || (key.code === "char" && key.ch === "j" && !key.ctrl)) {
-      this.selected = Math.min(this.items.length - 1, this.selected + 1);
-      return true;
-    }
-    if (key.code === "esc") {
-      this.done = true;
-      if (this.kind !== "dot") {
-        this.editor.pushSwitcherOutcome({ kind: "cancelled" });
-      }
-      return true;
-    }
-    if (key.code === "enter") {
-      this.done = true;
-      const picked = this.items[this.selected];
-      if (picked !== undefined) {
-        if (this.kind === "model") this.editor.pushSwitcherOutcome({ kind: "model", name: picked });
-        else if (this.kind === "prompt") {
-          this.editor.pushSwitcherOutcome({ kind: "prompt", name: picked });
-        } else {
-          this.editor.loadText(`.${picked}`);
-        }
-      }
-      return true;
-    }
-    return false;
-  }
+function isNoKeyError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes("No API key found");
 }
 
-export class SimpleInputEditor implements InputEditorLike {
-  buffer = "";
-  cursor = 0;
-  picker: PickerLike | null = null;
-  private activeSwitcher: "model" | "prompt" | null = null;
+function toolSummary(name: string, args: unknown): string {
+  if (args === undefined || args === null) return name;
+  let text: string;
+  try {
+    text = typeof args === "string" ? args : JSON.stringify(args);
+  } catch {
+    text = String(args);
+  }
+  if (text.length > 160) text = `${text.slice(0, 157)}...`;
+  return `${name} ${text}`;
+}
+
+export class PituiShell {
+  mode: "chat" | "panel" | "masked" = "chat";
+  ready = false;
+  running = false;
+  askActive = false;
+  askKeyHandler: ((data: string) => boolean) | null = null;
+  abortHandler: (() => void) | null = null;
+  submitHandler: ((text: string) => Promise<void>) | null = null;
+  private tui: TuiMainScreen;
+  private inputComp = new Input({ prompt: "> " });
+  private bannerText = new Text("", 0, 0);
+  private feedText = new Text("", 0, 0);
+  private pickerText = new Text("", 0, 0);
+  private statusText = new Text("", 0, 0);
+  private chatStack: VStack;
+  private chatView: Component;
+  private panelView: PanelView | null = null;
+  private maskedView: MaskedView | null = null;
+  private panelResolve: ((index: number | null) => void) | null = null;
+  private maskedResolve: ((value: string | null) => void) | null = null;
+  private feed: string[] = [];
+  private streamBuf = "";
+  private status = "ready";
+  private pickerIndex = 0;
+  private pickerDismissed = false;
+  private lastPickerToken: string | null = null;
   private history: string[] = [];
-  private historyIdx: number | null = null;
-  private switcherOutcomes: SwitcherOutcome[] = [];
-  private editorCmd: string | null = null;
-  private promptNames: string[] = [];
+  private historyIndex = -1;
+  private draft = "";
+  private quit = false;
+  private quitResolve: (() => void) | null = null;
+  private quitPromise: Promise<void>;
 
-  setCursor(pos: number): void {
-    const len = [...this.buffer].length;
-    this.cursor = Math.max(0, Math.min(pos, len));
+  constructor(initialFeed: string[], initialStatus: string) {
+    this.feed = [...initialFeed];
+    this.status = initialStatus;
+    this.tui = new TuiMainScreen(new ProcessTerminal(), true);
+    this.chatStack = new VStack([this.bannerText, this.feedText, this.pickerText, this.inputComp, this.statusText]);
+    const shell = this;
+    this.chatView = {
+      invalidate(): void {
+        shell.bannerText.invalidate();
+        shell.feedText.invalidate();
+        shell.pickerText.invalidate();
+        shell.statusText.invalidate();
+      },
+      render(width: number): string[] {
+        shell.bannerText.setText(centeredBanner(width).join("\n"));
+        const lines = [...shell.feed];
+        if (shell.streamBuf !== "") lines.push(...shell.streamBuf.split("\n"));
+        shell.feedText.setText(lines.join("\n"));
+        shell.pickerText.setText(shell.pickerLines());
+        shell.statusText.setText(shell.status);
+        return shell.chatStack.render(width);
+      },
+    };
+    this.inputComp.onSubmit = (value: string) => {
+      void this.handleSubmit(value);
+    };
+    this.tui.addChild(this.chatView);
+    this.tui.addInputListener((data) => this.handleListener(data));
+    this.quitPromise = new Promise<void>((resolve) => {
+      this.quitResolve = resolve;
+    });
   }
 
-  clearBuffer(): void {
-    this.buffer = "";
-    this.cursor = 0;
-  }
-
-  loadText(text: string): void {
-    this.buffer = text;
-    this.cursor = [...text].length;
-  }
-
-  handlePaste(data: string): void {
-    this.insert(data);
-  }
-
-  private insert(text: string): void {
-    const chars = [...this.buffer];
-    const insertChars = [...text];
-    chars.splice(this.cursor, 0, ...insertChars);
-    this.buffer = chars.join("");
-    this.cursor += insertChars.length;
-  }
-
-  handleKey(key: KeyEvent): string | null {
-    if (key.code === "enter") {
-      const text = this.buffer;
-      if (text !== "") this.history.push(text);
-      this.historyIdx = null;
-      this.clearBuffer();
-      return text;
+  private pickerLines(): string {
+    const value = this.inputComp.getValue();
+    if (this.pickerDismissed || !value.startsWith("/") || value.includes(" ")) return "";
+    const token = value.slice(1);
+    if (this.lastPickerToken !== token) {
+      this.lastPickerToken = token;
+      this.pickerIndex = 0;
     }
-    if (key.code === "char" && key.ch !== undefined && !key.ctrl && !key.alt) {
-      this.insert(key.ch);
-      return null;
+    const candidates = slashCandidates(token);
+    if (candidates.length === 0) return "";
+    if (this.pickerIndex >= candidates.length) this.pickerIndex = 0;
+    const { rows, selected } = pickerWindow(candidates, this.pickerIndex, 8);
+    return rows.map((row, i) => (i === selected ? `→ ${row.slice(2)}` : row)).join("\n");
+  }
+
+  private pickerCandidates(): string[] {
+    const value = this.inputComp.getValue();
+    if (!value.startsWith("/") || value.includes(" ")) return [];
+    return slashCandidates(value.slice(1));
+  }
+
+  private applyPicker(): boolean {
+    const candidates = this.pickerCandidates();
+    if (candidates.length === 0) return false;
+    const pick = candidates[this.pickerIndex % candidates.length]!;
+    this.inputComp.setValue(`/${pick} `);
+    this.pickerDismissed = false;
+    return true;
+  }
+
+  private handleListener(data: string): { consume?: boolean } | undefined {
+    if (this.askActive && this.askKeyHandler !== null) {
+      if (this.askKeyHandler(data)) return { consume: true };
     }
-    if (key.code === "backspace") {
-      const chars = [...this.buffer];
-      if (this.cursor > 0) {
-        chars.splice(this.cursor - 1, 1);
-        this.buffer = chars.join("");
-        this.cursor -= 1;
+    if (data === "\x03") {
+      if (this.mode === "panel") {
+        this.closePanel(null);
+        return { consume: true };
       }
-      return null;
-    }
-    if (key.code === "delete") {
-      const chars = [...this.buffer];
-      if (this.cursor < chars.length) {
-        chars.splice(this.cursor, 1);
-        this.buffer = chars.join("");
+      if (this.mode === "masked") {
+        this.closeMasked(null);
+        return { consume: true };
       }
-      return null;
-    }
-    if (key.code === "left") {
-      this.cursor = Math.max(0, this.cursor - 1);
-      return null;
-    }
-    if (key.code === "right") {
-      this.cursor = Math.min([...this.buffer].length, this.cursor + 1);
-      return null;
-    }
-    if (key.code === "home" || (key.code === "char" && key.ch === "a" && key.ctrl)) {
-      this.cursor = 0;
-      return null;
-    }
-    if (key.code === "end" || (key.code === "char" && key.ch === "e" && key.ctrl)) {
-      this.cursor = [...this.buffer].length;
-      return null;
-    }
-    if (key.code === "char" && key.ch === "u" && key.ctrl) {
-      this.clearBuffer();
-      return null;
-    }
-    if (key.code === "char" && key.ch === "k" && key.ctrl) {
-      const chars = [...this.buffer];
-      this.buffer = chars.slice(0, this.cursor).join("");
-      return null;
-    }
-    if (key.code === "char" && key.ch === "w" && key.ctrl) {
-      const chars = [...this.buffer];
-      let end = this.cursor;
-      while (end > 0 && chars[end - 1] === " ") end -= 1;
-      while (end > 0 && chars[end - 1] !== " ") end -= 1;
-      chars.splice(end, this.cursor - end);
-      this.buffer = chars.join("");
-      this.cursor = end;
-      return null;
-    }
-    if (key.code === "up") {
-      if (this.history.length > 0) {
-        if (this.historyIdx === null) this.historyIdx = this.history.length - 1;
-        else this.historyIdx = Math.max(0, this.historyIdx - 1);
-        this.loadText(this.history[this.historyIdx]);
+      if (this.running) {
+        this.abortHandler?.();
+        return { consume: true };
       }
-      return null;
-    }
-    if (key.code === "down") {
-      if (this.historyIdx !== null) {
-        if (this.historyIdx >= this.history.length - 1) {
-          this.historyIdx = null;
-          this.clearBuffer();
-        } else {
-          this.historyIdx += 1;
-          this.loadText(this.history[this.historyIdx]);
-        }
+      if (this.inputComp.getValue() === "") {
+        this.requestQuit();
+      } else {
+        this.inputComp.setValue("");
       }
-      return null;
+      return { consume: true };
     }
-    return null;
-  }
-
-  handlePickerKey(key: KeyEvent): boolean {
-    if (this.picker !== null && this.picker.active()) {
-      const handled = (this.picker as ListPicker).handleKey(key);
-      if (!this.picker.active()) {
-        this.picker = null;
-        this.activeSwitcher = null;
+    if (this.mode !== "chat") return undefined;
+    if (data === "\x04") {
+      if (this.inputComp.getValue() === "") {
+        this.requestQuit();
+        return { consume: true };
       }
-      return handled;
+      return undefined;
     }
-    return false;
+    if (data === "\x1b[A" || data === "\x1b[B") {
+      const candidates = this.pickerCandidates();
+      if (candidates.length > 0) {
+        if (data === "\x1b[A") this.pickerIndex = (this.pickerIndex + candidates.length - 1) % candidates.length;
+        else this.pickerIndex = (this.pickerIndex + 1) % candidates.length;
+        this.tui.requestRender();
+        return { consume: true };
+      }
+      if (data === "\x1b[A") this.historyUp();
+      else this.historyDown();
+      return { consume: true };
+    }
+    if (data === "\t") {
+      if (this.applyPicker()) {
+        this.tui.requestRender();
+        return { consume: true };
+      }
+      return undefined;
+    }
+    if (data === "\x1b") {
+      if (this.pickerCandidates().length > 0) {
+        this.pickerDismissed = true;
+      } else {
+        this.inputComp.setValue("");
+      }
+      this.tui.requestRender();
+      return { consume: true };
+    }
+    return undefined;
   }
 
-  takeRewindOutcome(): { kind: "confirmed"; idx: number } | null {
-
-    return null;
-  }
-
-  takeSwitcheroOutcome(): SwitcherOutcome | null {
-    return this.switcherOutcomes.shift() ?? null;
-  }
-
-  pushSwitcherOutcome(outcome: SwitcherOutcome): void {
-    this.switcherOutcomes.push(outcome);
-  }
-
-  switcherKind(): string | null {
-    if (this.picker === null || !this.picker.active()) return null;
-    return this.activeSwitcher;
-  }
-
-  setMonochrome(_v: boolean): void {}
-  setMouseCapture(_v: boolean): void {}
-  setPromptNames(names: string[]): void {
-    this.promptNames = names;
-  }
-  setThemeNames(_names: string[]): void {}
-  setEditor(editor: string): void {
-    this.editorCmd = editor;
-  }
-  setQuickModelNames(_names: string[]): void {}
-  setProviderNames(_names: string[]): void {}
-  setLiveModelNames(_names: string[]): void {}
-  loadGlobalHistory(): void {}
-
-  startDotPicker(): void {
-    this.picker = new ListPicker("dot", this.promptNames, this, null);
-    this.activeSwitcher = null;
-  }
-
-  startModelSwitcher(
-    quick: string[],
-    live: string[],
-    _details: Map<string, string>,
-    currentQuick: string | null,
-    _currentModel: string,
-  ): void {
-    const items = [...new Set([...quick, ...live])];
-    this.picker = new ListPicker("model", items, this, currentQuick);
-    this.activeSwitcher = "model";
-  }
-
-  startPromptSwitcher(
-    items: string[],
-    _details: Map<string, string>,
-    current: string | null,
-  ): void {
-    this.picker = new ListPicker("prompt", items, this, current);
-    this.activeSwitcher = "prompt";
-  }
-
-  openInEditor(): void {
-    const editor = this.editorCmd ?? process.env["EDITOR"] ?? "vi";
-    const tmpFile = join(
-      process.env["TMPDIR"] ?? "/tmp",
-      `tiny-crow-input-${process.pid}.txt`,
-    );
-    try {
-      writeFileSync(tmpFile, this.buffer);
-    } catch {
+  private historyUp(): void {
+    if (this.history.length === 0) return;
+    if (this.historyIndex === -1) {
+      this.draft = this.inputComp.getValue();
+      this.historyIndex = this.history.length - 1;
+    } else if (this.historyIndex > 0) {
+      this.historyIndex -= 1;
+    } else {
       return;
     }
-    const [prog, args] = parseEditorCommand(editor);
-    const mouseCapture = false;
-    suspendTui(mouseCapture, () => {
-      try {
-        spawnSync(prog, [...args, tmpFile], { stdio: "inherit" });
-      } catch {
+    this.inputComp.setValue(this.history[this.historyIndex]!);
+    this.pickerDismissed = false;
+  }
 
+  private historyDown(): void {
+    if (this.historyIndex === -1) return;
+    if (this.historyIndex < this.history.length - 1) {
+      this.historyIndex += 1;
+      this.inputComp.setValue(this.history[this.historyIndex]!);
+    } else {
+      this.historyIndex = -1;
+      this.inputComp.setValue(this.draft);
+    }
+    this.pickerDismissed = false;
+  }
+
+  private async handleSubmit(rawValue: string): Promise<void> {
+    const value = rawValue.trim();
+    if (value.startsWith("/") && !value.includes(" ")) {
+      const token = value.slice(1);
+      if (!SLASH_COMMANDS.includes(token)) {
+        const candidates = slashCandidates(token);
+        if (candidates.length > 0) {
+          const pick = candidates[this.pickerIndex % candidates.length]!;
+          await this.submit(`/${pick}`);
+          return;
+        }
       }
+    }
+    await this.submit(value);
+  }
+
+  private async submit(value: string): Promise<void> {
+    if (value !== "") {
+      this.history.push(value);
+      if (this.history.length > 200) this.history.splice(0, this.history.length - 200);
+    }
+    this.historyIndex = -1;
+    this.draft = "";
+    this.inputComp.setValue("");
+    this.pickerDismissed = false;
+    this.pickerIndex = 0;
+    await this.submitHandler?.(value);
+    this.tui.requestRender();
+  }
+
+  requestQuit(): void {
+    if (this.quit) return;
+    this.quit = true;
+    this.quitResolve?.();
+  }
+
+  feedLine(text: string): void {
+    for (const line of text.split("\n")) this.feed.push(line);
+    this.tui.requestRender();
+  }
+
+  clearFeed(): void {
+    this.feed = [];
+    this.tui.requestRender();
+  }
+
+  setStatus(text: string): void {
+    this.status = text;
+    this.tui.requestRender();
+  }
+
+  getStatus(): string {
+    return this.status;
+  }
+
+  appendStream(text: string): void {
+    this.streamBuf += text;
+    this.tui.requestRender();
+  }
+
+  endStream(): void {
+    if (this.streamBuf !== "") {
+      for (const line of this.streamBuf.split("\n")) this.feed.push(line);
+      this.streamBuf = "";
+    }
+    this.tui.requestRender();
+  }
+
+  inputValue(): string {
+    return this.inputComp.getValue();
+  }
+
+  setInputValue(value: string): void {
+    this.inputComp.setValue(value);
+  }
+
+  requestRender(): void {
+    this.tui.requestRender();
+  }
+
+  openPanel(title: string, items: PanelItem[], statusHint: string): Promise<number | null> {
+    return new Promise<number | null>((resolve) => {
+      const view = new PanelView(title, statusHint, items);
+      view.onSelect = (index) => {
+        this.closePanel(index);
+      };
+      this.panelResolve = resolve;
+      this.panelView = view;
+      this.mode = "panel";
+      this.tui.clear();
+      this.tui.addChild(view);
+      this.tui.setFocus(view);
+      this.tui.requestRender();
     });
-    try {
-      this.loadText(readFileSync(tmpFile, "utf8"));
-    } catch {
+  }
 
+  closePanel(index: number | null): void {
+    if (this.mode !== "panel") return;
+    this.panelView = null;
+    this.mode = "chat";
+    this.tui.clear();
+    this.tui.addChild(this.chatView);
+    this.tui.setFocus(this.inputComp);
+    this.tui.requestRender();
+    const resolve = this.panelResolve;
+    this.panelResolve = null;
+    resolve?.(index);
+  }
+
+  openMasked(title: string, statusHint: string): Promise<string | null> {
+    return new Promise<string | null>((resolve) => {
+      const view = new MaskedView(title, statusHint);
+      view.onDone = (value) => {
+        this.closeMasked(value);
+      };
+      this.maskedResolve = resolve;
+      this.maskedView = view;
+      this.mode = "masked";
+      this.tui.clear();
+      this.tui.addChild(view);
+      this.tui.setFocus(view);
+      this.tui.requestRender();
+    });
+  }
+
+  closeMasked(value: string | null): void {
+    if (this.mode !== "masked") return;
+    this.maskedView = null;
+    this.mode = "chat";
+    this.tui.clear();
+    this.tui.addChild(this.chatView);
+    this.tui.setFocus(this.inputComp);
+    this.tui.requestRender();
+    const resolve = this.maskedResolve;
+    this.maskedResolve = null;
+    resolve?.(value);
+  }
+
+  suspendEditor(fn: () => void): void {
+    this.tui.stop();
+    try {
+      fn();
+    } finally {
+      this.tui.start();
+      this.tui.setFocus(this.inputComp);
+      this.tui.requestRender();
     }
+  }
+
+  async run(): Promise<boolean> {
+    this.tui.start();
+    this.tui.setFocus(this.inputComp);
+    this.tui.requestRender();
+    await this.quitPromise;
+    this.tui.stop();
+    return this.ready;
   }
 }
 
-export type SlashOutcome =
-  | { kind: "defer_compress"; instructions?: string }
-  | { kind: "defer_init" }
-  | { kind: "defer_review"; message: string }
-  | { kind: "defer_editor"; path: string };
+const PANEL_COMMANDS = new Set(["provider", "model", "models", "prompt", "theme", "sessions", "help"]);
 
-export type SlashResult =
-  | { ok: true }
-  | { ok: false; error: string; outcome?: SlashOutcome };
-
-export interface SlashHandlerCtx {
-  renderer: Renderer;
-  input: InputEditorLike;
-  run: AgentRunState;
-  ui: UiContext;
-  slash: SlashState;
-  chain: ChainState;
-}
-
-export type SlashHandler = (text: string, ctx: SlashHandlerCtx) => Promise<SlashResult>;
-
-export interface AppOptions {
-  ui: UiContext;
-  agent?: AnyAgent | null;
-  askEvents?: EventQueue<AskRequest> | null;
-  autoTriggerMsg?: string | null;
-  headlessBackend?: RenderBackend | null;
-  inputEditor?: InputEditorLike | null;
-  slashHandler?: SlashHandler | null;
-  chainPhaseFromPrompt?: ChainPhaseFromPrompt | null;
-  applyPromptModel?: (
-    promptName: string,
-    ui: UiContext,
-    agent: AnyAgent | null,
-    reasoningEnabled: boolean,
-    renderer: Renderer,
-  ) => Promise<void>;
-  warmModelCache?: (
-    provider: string,
-    isCustom: boolean,
-    client: UiContext["client"],
-    cli: UiContext["cli"],
-    cfg: UiContext["cfg"],
-  ) => Promise<string[]>;
-  cachedModelIds?: (provider: string) => string[];
-  dataDir?: string;
-}
-
-const TURN_TRACE_MAX = 64;
-
-export const AGENTS_CREATION_PROMPT =
-  "Create an AGENTS.md file in the current project that describes how to build, test, and work in this codebase, based on what you can see in the repository. Keep it concise and factual.";
-
-const BUILTIN_PROVIDERS = [
-  "anthropic",
-  "openai",
-  "gemini",
-  "openrouter",
-  "ollama",
-  "opencode-zen",
-  "opencode-go",
-];
-
-export class App {
+export class PituiApp {
   private ui: UiContext;
+  private shell: PituiShell;
   private runState: AgentRunState;
-  private chain: ChainState;
-  private slash: SlashState;
-  private renderer: Renderer;
-  private input: InputEditorLike;
-  private askEvents: EventQueue<AskRequest> | null;
-  private btwEvents: EventQueue<BtwEvent> = new EventQueue<BtwEvent>();
-  private btwAbort: [number, { abort(): void }][] = [];
-  private btwInflight = 0;
+  private slashState: SlashState;
+  private chainState: ChainState;
+  private slashHandler: PituiSlashHandler | null;
+  private askEvents: import("./state.ts").EventQueue<AskRequest> | null;
+  private autoTriggerMsg: string | null;
+  private quit = false;
+  private running = false;
+  private streamKind: "agent" | "reasoning" | null = null;
+  private queued: string[] = [];
+  private toolCallMap = new Map<string, number>();
+  private lastSessionCallId = 0;
+  private btwActive: { queue: import("./state.ts").EventQueue<BtwEvent>; id: number }[] = [];
   private btwNextId = 0;
-  private btwTotalCost = 0;
-  private btwTotalIn = 0;
-  private btwTotalOut = 0;
-  private userEvents: EventQueue<UserEvent> = new EventQueue<UserEvent>();
-  private running = true;
-  private eventThread: { stop(): void } | null = null;
-  private prebuildPromise: Promise<AnyAgent | null> | null = null;
-  private prebuildValue: AnyAgent | null = null;
-  private prebuildDone = false;
-  private terminalGuard: TerminalGuard | null = null;
-  private lastGitRefresh: number | null = null;
-  private slashHandler: SlashHandler;
-  private chainPhaseFromPrompt: ChainPhaseFromPrompt | null;
-  private applyPromptModelFn: AppOptions["applyPromptModel"];
-  private warmModelCacheFn: AppOptions["warmModelCache"];
-  private cachedModelIdsFn: AppOptions["cachedModelIds"];
-  private dataDir: string;
-  private headless: boolean;
+  private askPrompt: AskRequest | null = null;
+  private noKey = false;
 
-  private constructor(
-    ui: UiContext,
-    runState: AgentRunState,
-    chain: ChainState,
-    slash: SlashState,
-    renderer: Renderer,
-    input: InputEditorLike,
-    askEvents: EventQueue<AskRequest> | null,
-    opts: AppOptions,
-  ) {
+  private constructor(ui: UiContext, shell: PituiShell, opts: PituiAppOptions) {
     this.ui = ui;
-    this.runState = runState;
-    this.chain = chain;
-    this.slash = slash;
-    this.renderer = renderer;
-    this.input = input;
-    this.askEvents = askEvents;
-    this.slashHandler =
-      opts.slashHandler ??
-      (async (text) => ({ ok: false, error: `unknown slash command: ${text}` }));
-    this.chainPhaseFromPrompt = opts.chainPhaseFromPrompt ?? null;
-    this.applyPromptModelFn = opts.applyPromptModel;
-    this.warmModelCacheFn = opts.warmModelCache;
-    this.cachedModelIdsFn = opts.cachedModelIds;
-    this.dataDir =
-      opts.dataDir ??
-      join(process.env["XDG_DATA_HOME"] ?? join(homedir(), ".local", "share"), "tiny-crow");
-    this.headless = opts.headlessBackend !== undefined && opts.headlessBackend !== null;
-  }
-
-  static async create(opts: AppOptions): Promise<App> {
-    const ui = opts.ui;
-    const headless = opts.headlessBackend !== undefined && opts.headlessBackend !== null;
-    const terminalGuard = headless ? null : new TerminalGuard(resolveMouseCapture(ui.cfg));
-
-    ui.session.showCostAlways = resolveShowCostAlways(ui.cfg);
-    initStatusline(ui.cfg);
-
-    try {
-      ui.session.refreshGitBranch();
-    } catch {
-
-    }
-    if (needsGitStatus()) {
-      try {
-        await ui.session.refreshGitStatusAsync();
-      } catch {
-
-      }
-    }
-
-    const renderer = headless
-      ? Renderer.withBackend(opts.headlessBackend as RenderBackend)
-      : Renderer.new();
-    renderer.setStatuslineHeight(lineCount());
-    renderer.setMonochrome(ui.cli.noColor);
-    renderer.setChatMargin(resolveChatLeftMargin(ui.cfg));
-    if (ui.context.currentThemeName !== undefined) {
-      const content = ui.context.themes.get(ui.context.currentThemeName);
-      if (content !== undefined) applyThemeContent(content, renderer);
-    } else if (ui.cfg.colors !== undefined) {
-      applyColorsConfig(ui.cfg.colors, renderer);
-    }
-
-    const input = opts.inputEditor ?? new SimpleInputEditor();
-    input.setMonochrome(ui.cli.noColor);
-    input.setMouseCapture(resolveMouseCapture(ui.cfg));
-    input.setPromptNames([...ui.context.prompts.keys()]);
-    input.setThemeNames([...ui.context.themes.keys()]);
-    if (ui.cfg.editor !== undefined) input.setEditor(ui.cfg.editor);
-    input.setQuickModelNames([...quickModelsMap(ui.cfg).keys()]);
-    {
-      const providers = [...BUILTIN_PROVIDERS];
-      for (const key of Object.keys(ui.cfg.customProviders ?? {})) providers.push(key);
-      input.setProviderNames(providers);
-    }
-    input.loadGlobalHistory();
-
-    const runState = new AgentRunState();
-    runState.agent = opts.agent ?? null;
-    const chain = new ChainState();
-    const slash = new SlashState({
+    this.shell = shell;
+    this.runState = new AgentRunState();
+    this.slashState = new SlashState({
       showReasoning: resolveShowReasoning(ui.cfg),
       reasoningEnabled: true,
       todoToolsEnabled: false,
     });
-    ui.session.reasoningEnabled = slash.reasoningEnabled;
-    ui.session.overheadTokens = estimateOverhead(ui, slash.reasoningEnabled);
+    this.chainState = new ChainState();
+    this.slashHandler = opts.slashHandler ?? null;
+    this.askEvents = opts.askEvents ?? null;
+    this.autoTriggerMsg = opts.autoTriggerMsg ?? null;
+    shell.abortHandler = () => this.abortMainRun();
+    shell.askKeyHandler = (data) => this.handleAskKey(data);
+    shell.submitHandler = (text) => this.submit(text);
+  }
 
-    renderSession(renderer, ui.session, ui.cli, ui.cfg, ui.context);
-    const dataDir =
-      opts.dataDir ?? join(process.env["XDG_DATA_HOME"] ?? join(homedir(), ".local", "share"), "tiny-crow");
-    const markerPath = join(dataDir, "shown_welcome_msg");
-    if (resolveAlwaysShowWelcome(ui.cfg) || !existsSync(markerPath)) {
-      showWelcome(renderer, !ui.cli.disableLazygit);
-      if (!resolveAlwaysShowWelcome(ui.cfg)) {
-        try {
-          mkdirSync(dirname(markerPath), { recursive: true });
-          writeFileSync(markerPath, "");
-        } catch {
-
+  static async create(opts: PituiAppOptions): Promise<PituiApp> {
+    const ui = opts.ui;
+    const feed: string[] = [];
+    if (ui.session.messages.length > 0) {
+      feed.push("Resumed session:");
+      for (const message of ui.session.messages) {
+        const role = (message as { role?: unknown }).role;
+        const content = String((message as { content?: unknown }).content ?? "");
+        if (role === "user") {
+          for (const line of content.split("\n")) feed.push(`> ${line}`);
+        } else if (role === "assistant") {
+          for (const line of content.split("\n")) feed.push(line);
+        } else if (role === "toolcall" || role === "tool_call") {
+          feed.push(`◈ ${singleLine(content, 160)}`);
         }
       }
     }
-    const app = new App(ui, runState, chain, slash, renderer, input, opts.askEvents ?? null, opts);
-    app.terminalGuard = terminalGuard;
-    app.refresh();
-    app.lastGitRefresh = Date.now();
-
-    {
-      const provider = ui.session.provider;
-      const isCustom = (ui.cfg.customProviders ?? {})[provider] !== undefined;
-      let ids: string[] = [];
-      if (!headless && opts.warmModelCache !== undefined) {
-        try {
-          ids = await opts.warmModelCache(provider, isCustom, ui.client, ui.cli, ui.cfg);
-        } catch {
-          ids = [];
-        }
-      } else if (opts.cachedModelIds !== undefined) {
-        ids = opts.cachedModelIds(provider);
-      }
-      input.setLiveModelNames(ids);
-    }
-
-    if (opts.autoTriggerMsg !== undefined && opts.autoTriggerMsg !== null) {
-      const triggerMsg = opts.autoTriggerMsg;
-      for (const line of triggerMsg.split("\n")) {
-        renderer.writeLine(`> ${sanitizeOutput(line)}`, "green");
-      }
-      renderer.writeLine("", "white");
-      await ensureAgent(runState, ui, slash.reasoningEnabled);
-      const history = ui.convertHistory(ui.session);
-      if (runState.agent !== null) {
-        const runner = await runState.agent.spawnRunner(triggerMsg, history, ui.cfg.retry);
-        runState.agentRx = runner.events;
-        runState.mainAbort = runner.abortHandle;
-        runState.isRunning = true;
-        ui.statusSignals?.sendStart();
-      }
-      ui.session.addMessage("user", triggerMsg);
-    }
-
-    if (!headless) {
-      app.eventThread = spawnEventThread(app.userEvents, () => app.running);
-    }
-
-    if (
-      (opts.autoTriggerMsg === undefined || opts.autoTriggerMsg === null) &&
-      runState.agent === null
-    ) {
-      const sessionModel = ui.session.model;
-      const reasoningEnabled = slash.reasoningEnabled;
-      app.prebuildPromise = ui
-        .agentBuildCtx()
-        .rebuildAgent(sessionModel, reasoningEnabled)
-        .then((agent) => {
-          app.prebuildValue = agent;
-          app.prebuildDone = true;
-          return agent;
-        })
-        .catch(() => {
-          app.prebuildDone = true;
-          return null;
-        });
-    }
-
+    for (const line of welcomeHintLines()) feed.push(line);
+    const shell = new PituiShell(feed, "ready");
+    const app = new PituiApp(ui, shell, opts);
     return app;
   }
 
-  static async createHeadless(
-    opts: AppOptions & { backend: RenderBackend },
-  ): Promise<App> {
-    return App.create({ ...opts, headlessBackend: opts.backend });
+  private statusText(): string {
+    const session = this.ui.session;
+    const cost = typeof session.totalCost === "number" ? session.totalCost : 0;
+    const state = this.running
+      ? "working...  Ctrl-C aborts"
+      : this.noKey
+        ? "no API key: run /provider to configure one"
+        : this.askPrompt !== null
+          ? "permission needed: y allow once, a allow always, n deny"
+          : "ready";
+    return `${session.provider} / ${session.model} | ${session.messages.length} msgs | $${cost.toFixed(4)} | ${state} | /help`;
+  }
+
+  private refreshStatus(): void {
+    this.shell.setStatus(this.statusText());
+  }
+
+  private async saveSession(): Promise<void> {
+    try {
+      await this.ui.saveSessionIfEnabled();
+    } catch {
+    }
+  }
+
+  private rendererAdapter(): Record<string, unknown> {
+    return {
+      writeLine: (text: string) => {
+        this.shell.feedLine(text);
+      },
+      write: (text: string) => {
+        this.shell.feedLine(text);
+      },
+      clearContent: () => {
+        this.shell.clearFeed();
+      },
+      setBackgroundColors: () => undefined,
+      renderViewport: () => {
+        this.shell.requestRender();
+      },
+    };
+  }
+
+  private inputAdapter(): Record<string, unknown> {
+    return {
+      trim: () => this.shell.inputValue().trim(),
+      cursor: () => this.shell.inputValue().length,
+      buffer: () => this.shell.inputValue(),
+      setLiveModelNames: () => undefined,
+      startRewindPicker: () => undefined,
+    };
   }
 
   async run(): Promise<void> {
-    for (;;) {
-      const flow = await this.step();
-      if (flow === "break") break;
-    }
-    await this.handleWorktreeAutoMerge();
-  }
-
-  async step(): Promise<"continue" | "break"> {
-    this.ui.session.reasoningEnabled = this.slash.reasoningEnabled;
-
-    const sleep = (ms: number): Promise<null> =>
-      new Promise((resolve) => setTimeout(() => resolve(null), ms));
-    const never: Promise<null> = new Promise(() => {});
-
-    const userQueued = this.userEvents.tryNext();
-    if (userQueued !== null) {
-      const flow = await this.handleUserEvent(userQueued);
-      return flow;
-    }
-    const agentQueued =
-      this.runState.agentRx !== null ? this.runState.agentRx.tryNext() : null;
-    if (agentQueued !== null) {
-      await this.handleAgentEvent(agentQueued);
-      return "continue";
-    }
-    const askQueued = this.askEvents?.tryNext() ?? null;
-    if (askQueued !== null) {
-      await handlePermissionRequest(
-        askQueued,
-        this.renderer,
-        this.ui,
-        this.runState,
-        this.userEvents,
-      );
-      this.refresh();
-      return "continue";
-    }
-    const btwQueued = this.btwEvents.tryNext();
-    if (btwQueued !== null) {
-      this.handleBtwEvent(btwQueued);
-      this.refresh();
-      return "continue";
-    }
-    if (this.prebuildDone && this.runState.agent === null && this.prebuildValue !== null) {
-      this.takePrebuild(this.prebuildValue, true);
-      this.refresh();
-      return "continue";
-    }
-
-    const timeoutMs = this.runState.isRunning ? 100 : 250;
-    const raced = await Promise.race([
-      this.userEvents.nextShared().then((ev) => ({ kind: "user" as const, ev })),
-      this.runState.agentRx !== null
-        ? this.runState.agentRx.nextShared().then((ev) => ({ kind: "agent" as const, ev }))
-        : never.then(() => ({ kind: "agent" as const, ev: null })),
-      this.askEvents !== null
-        ? this.askEvents.nextShared().then((ev) => ({ kind: "ask" as const, ev }))
-        : never.then(() => ({ kind: "ask" as const, ev: null })),
-      this.btwEvents.nextShared().then((ev) => ({ kind: "btw" as const, ev })),
-      sleep(timeoutMs).then(() => ({ kind: "tick" as const, ev: null })),
-    ]);
-
-    switch (raced.kind) {
-      case "user":
-        if (raced.ev !== null) return this.handleUserEvent(raced.ev);
-        break;
-      case "agent":
-        if (raced.ev !== null) await this.handleAgentEvent(raced.ev);
-        break;
-      case "ask":
-        if (raced.ev !== null) {
-          await handlePermissionRequest(
-            raced.ev,
-            this.renderer,
-            this.ui,
-            this.runState,
-            this.userEvents,
-          );
-          this.refresh();
-        }
-        break;
-      case "btw":
-        if (raced.ev !== null) {
-          this.handleBtwEvent(raced.ev);
-          this.refresh();
-        }
-        break;
-      case "tick":
-        if (this.runState.isRunning) {
-          this.refresh();
-        } else if (!this.running) {
-          return "break";
-        }
-        break;
-    }
-    if (this.prebuildDone && this.runState.agent === null && this.prebuildValue !== null) {
-      this.takePrebuild(this.prebuildValue, false);
-    }
-    return "continue";
-  }
-
-  inject(ev: UserEvent): void {
-    this.userEvents.push(ev);
-  }
-
-  isRunning(): boolean {
-    return this.runState.isRunning;
-  }
-
-  isScrolling(): boolean {
-    return this.renderer.isScrolling();
-  }
-
-  lastBottomSnapshot(): ReturnType<Renderer["lastBottomSnapshot"]> {
-    return this.renderer.lastBottomSnapshot();
-  }
-
-  feedText(): string {
-    return this.renderer
-      .feed()
-      .lines(80)
-      .map((l) => l.text)
-      .join("\n");
-  }
-
-  inputBuffer(): string {
-    return this.input.buffer;
-  }
-
-  backendOutput(): string {
-    return this.renderer.capturedOutput();
-  }
-
-  session(): UiContext["session"] {
-    return this.ui.session;
-  }
-
-  switcherKind(): string | null {
-    return this.input.switcherKind();
-  }
-
-  async teardown(): Promise<void> {
-    this.running = false;
-    this.eventThread?.stop();
-    this.terminalGuard?.dispose();
-    this.terminalGuard = null;
-  }
-
-  private refresh(): void {
-    refreshDisplay(
-      this.renderer,
-      this.input.buffer,
-      this.input.cursor,
-      this.input.picker,
-      this.ui,
-      this.runState,
-      this.chain,
-      new BtwStats({
-        cost: this.btwTotalCost,
-        input: this.btwTotalIn,
-        output: this.btwTotalOut,
-      }),
-    );
-  }
-
-  private async refreshGitStateAsync(): Promise<void> {
-    const now = Date.now();
-    if (this.lastGitRefresh !== null && now - this.lastGitRefresh < 2000) return;
-    this.lastGitRefresh = now;
+    this.refreshStatus();
+    const timer = setInterval(() => {
+      void this.tick();
+    }, 50);
     try {
-      await this.ui.session.refreshGitBranchAsync();
-    } catch {
-
+      if (this.autoTriggerMsg !== null && this.autoTriggerMsg !== "") {
+        await this.submitPlain(this.autoTriggerMsg, true);
+      }
+      await this.shell.run();
+      this.quit = true;
+    } finally {
+      clearInterval(timer);
     }
-    if (needsGitStatus()) {
+  }
+
+  private async tick(): Promise<void> {
+    await this.drainAgentEvents();
+    this.drainBtwEvents();
+    this.drainAskEvents();
+    if (!this.running && this.queued.length > 0) {
+      const next = this.queued.shift()!;
+      await this.submitPlain(next, false);
+    }
+    this.refreshStatus();
+  }
+
+  private handleAskKey(data: string): boolean {
+    if (this.askPrompt === null) return false;
+    const req = this.askPrompt;
+    if (data === "y" || data === "Y") {
+      this.askPrompt = null;
+      this.shell.askActive = false;
+      req.reply.send({ kind: "allow_once" });
+      this.shell.feedLine("allowed once");
+      return true;
+    }
+    if (data === "a" || data === "A") {
+      this.askPrompt = null;
+      this.shell.askActive = false;
+      const pattern = suggestPattern(req.tool, req.input);
+      this.ui.session.permissionAllowlist.push({ tool: req.tool, pattern });
+      req.reply.send({ kind: "allow_always", pattern });
+      this.shell.feedLine(`allowed always: ${pattern}`);
+      return true;
+    }
+    if (data === "n" || data === "N" || data === "\x1b") {
+      this.askPrompt = null;
+      this.shell.askActive = false;
+      req.reply.send({ kind: "deny" });
+      this.shell.feedLine("denied");
+      return true;
+    }
+    return false;
+  }
+
+  private async submit(text: string): Promise<void> {
+    if (text === "/quit" || text === "/exit") {
+      this.shell.requestQuit();
+      return;
+    }
+    if (text.startsWith("/queue")) {
+      this.runQueueCommand(text.slice("/queue".length).trim());
+      this.refreshStatus();
+      return;
+    }
+    if (text.startsWith("/btw ")) {
+      await this.runBtw(text.slice("/btw".length).trim());
+      this.refreshStatus();
+      return;
+    }
+    if (text.startsWith("/")) {
+      const parts = text.slice(1).split(/\s+/);
+      const cmd = parts[0] ?? "";
+      if (PANEL_COMMANDS.has(cmd) && parts.length === 1) {
+        await this.runPanelCommand(text);
+        this.refreshStatus();
+        return;
+      }
+      await this.runSlash(text);
+      this.refreshStatus();
+      return;
+    }
+    if (text.startsWith("!")) {
+      this.runBang(text);
+      await this.saveSession();
+      this.refreshStatus();
+      return;
+    }
+    if (text === "") {
+      this.refreshStatus();
+      return;
+    }
+    if (this.running) {
+      this.queued.push(text);
+      this.shell.feedLine(`queued (${this.queued.length})`);
+      return;
+    }
+    await this.submitPlain(text, false);
+    this.refreshStatus();
+  }
+
+  private async submitPlain(text: string, alreadyRecorded: boolean): Promise<void> {
+    for (const line of text.split("\n")) {
+      this.shell.feedLine(`> ${line}`);
+    }
+    if (!alreadyRecorded) this.ui.session.addMessage("user", text);
+    await this.startMainRun(text);
+  }
+
+  private async startMainRun(text: string): Promise<void> {
+    if (this.runState.agent === null) {
       try {
-        await this.ui.session.refreshGitStatusAsync();
-      } catch {
-
-      }
-    }
-  }
-
-  private async handleUserEvent(ev: UserEvent): Promise<"continue" | "break"> {
-    switch (ev.type) {
-      case "focus_gained":
-        await this.refreshGitStateAsync();
-        break;
-      case "resize":
-        this.renderer.resize();
-        break;
-      case "scroll_up":
-        if (!this.renderer.inputScrollUp()) this.renderer.scrollLineUp();
-        break;
-      case "scroll_down":
-        if (this.renderer.isScrolling()) this.renderer.scrollLineDown();
-        else this.renderer.inputScrollDown();
-        break;
-      case "mouse_down": {
-        const pos = this.renderer.inputCursorForClick(ev.row, ev.col, this.input.buffer);
-        if (pos !== null) {
-          this.input.setCursor(pos);
-        } else if (
-          ev.row < this.renderer.visibleLines() &&
-          this.renderer.bufferLineAtRow(ev.row) !== null
-        ) {
-          const idx = this.renderer.bufferLineAtRow(ev.row) as number;
-          const url = this.renderer.linkUrlAt(idx, ev.col);
-          if (url !== null) {
-            try {
-              openUrl(url);
-            } catch (e) {
-              this.renderer.writeLine(
-                `cannot open link: ${e instanceof Error ? e.message : String(e)}`,
-                C_ERROR,
-              );
-            }
-          } else {
-            this.renderer.selectionActive = true;
-            this.renderer.selectionStart = idx;
-            this.renderer.selectionEnd = idx;
+        this.runState.agent = await this.ui
+          .agentBuildCtx()
+          .rebuildAgent(this.ui.session.model, true);
+      } catch (e) {
+        this.noKey = isNoKeyError(e);
+        if (this.noKey) {
+          for (const line of setupGuideLines(this.ui.session.provider, this.ui.session.model)) {
+            this.shell.feedLine(line);
           }
+          this.shell.feedLine("Use /provider here to configure a key, then chat again.");
+        } else {
+          this.shell.feedLine(`error: ${e instanceof Error ? e.message : String(e)}`);
         }
-        break;
-      }
-      case "mouse_drag": {
-        if (this.renderer.selectionActive) {
-          const idx = this.renderer.bufferLineAtRow(ev.row);
-          if (idx !== null) this.renderer.selectionEnd = idx;
-        }
-        break;
-      }
-      case "mouse_up": {
-        if (this.renderer.selectionActive) {
-          const idx = this.renderer.bufferLineAtRow(ev.row);
-          if (idx !== null) this.renderer.selectionEnd = idx;
-          const text = this.renderer.selectedText();
-          if (text !== null) {
-            try {
-              copyToClipboard(text);
-            } catch (e) {
-              this.renderer.writeLine(
-                `copy to clipboard failed: ${e instanceof Error ? e.message : String(e)}`,
-                C_ERROR,
-              );
-            }
-          }
-          this.renderer.clearSelection();
-        }
-        break;
-      }
-      case "paste":
-        this.input.handlePaste(ev.data);
-        break;
-      case "mcp_login_done":
-        this.renderer.writeLine(
-          ev.error !== undefined
-            ? `login failed for '${ev.server}': ${ev.error}`
-            : `authorized '${ev.server}' (will connect on next start)`,
-          ev.error !== undefined ? C_ERROR : C_AGENT,
-        );
-        break;
-      case "key": {
-        const key = ev.key;
-        const isCtrlC = key.code === "char" && key.ch === "c" && key.ctrl;
-        const isCtrlD = key.code === "char" && key.ch === "d" && key.ctrl;
-        if (isCtrlC || isCtrlD) {
-          if (this.btwInflight > 0) {
-            for (const [, h] of this.btwAbort) h.abort();
-            this.btwAbort = [];
-            this.btwInflight = 0;
-            this.renderer.writeLine("btw cancelled", C_ERROR);
-          } else if (this.runState.isRunning) {
-            this.abortMainRun();
-          } else {
-            return "break";
-          }
-          this.refresh();
-          return "continue";
-        }
-        try {
-          await this.handleKeyEvent(key);
-        } catch (e) {
-          if (e instanceof Error && e.message === "Interrupted") return "break";
-          throw e;
-        }
-        break;
-      }
-      case "focus_lost":
-        break;
-    }
-    this.refresh();
-    return "continue";
-  }
-
-  private async handleKeyEvent(key: KeyEvent): Promise<void> {
-    if (this.renderer.selectionActive && key.code === "char" && key.ch === "y") {
-      const text = this.renderer.selectedText();
-      if (text !== null) {
-        try {
-          copyToClipboard(text);
-          this.renderer.writeLine("copied selection", "green");
-        } catch (e) {
-          this.renderer.writeLine(
-            `copy to clipboard failed: ${e instanceof Error ? e.message : String(e)}`,
-            C_ERROR,
-          );
-        }
-      }
-      this.renderer.clearSelection();
-      return;
-    }
-    if (this.renderer.selectionActive && key.code === "esc") {
-      this.renderer.clearSelection();
-      return;
-    }
-
-    if (key.code === "char" && key.ch === "r" && key.ctrl) {
-      this.slash.showReasoning = !this.slash.showReasoning;
-      this.renderer.writeLine(
-        `reasoning visibility: ${this.slash.showReasoning ? "on" : "off"}`,
-        "white",
-      );
-      return;
-    }
-    if (key.code === "up" && key.ctrl) {
-      this.renderer.scrollLineUp();
-      return;
-    }
-    if (key.code === "down" && key.ctrl) {
-      this.renderer.scrollLineDown();
-      return;
-    }
-    switch (key.code) {
-      case "pageup":
-        this.renderer.scrollPageUp();
-        return;
-      case "pagedown":
-        this.renderer.scrollPageDown();
-        return;
-      case "home":
-        this.renderer.scrollToTop();
-        return;
-      case "end":
-        this.renderer.scrollToBottom();
-        return;
-      default:
-        break;
-    }
-
-    if (key.alt && key.code === "char" && (key.ch === "m" || key.ch === "M")) {
-      this.openModelSwitcher();
-      return;
-    }
-    if (key.alt && key.code === "char" && (key.ch === "p" || key.ch === "P")) {
-      this.openPromptSwitcher();
-      return;
-    }
-
-    if (this.input.picker !== null && this.input.picker.active()) {
-      if (this.input.handlePickerKey(key)) {
-        const rewind = this.input.takeRewindOutcome();
-        if (rewind !== null && rewind.kind === "confirmed") {
-          const msg = this.ui.session.messages[rewind.idx];
-          if (msg !== undefined && this.ui.session.rewindTo(rewind.idx) > 0) {
-            this.input.loadText(msg.content);
-            await this.saveSession();
-            renderSession(this.renderer, this.ui.session, this.ui.cli, this.ui.cfg, this.ui.context);
-            this.renderer.writeLine("rewound; /redo to restore", "green");
-          }
-        }
-        const switcher = this.input.takeSwitcheroOutcome();
-        if (switcher !== null) {
-          if (switcher.kind === "model") {
-            await this.runSlashCommand(`/models ${switcher.name}`);
-          } else if (switcher.kind === "prompt") {
-            await this.runSlashCommand(`/prompt ${switcher.name}`);
-          }
-        }
+        this.refreshStatus();
         return;
       }
     }
-
-    if (key.code === "char" && key.ch === "g" && key.ctrl) {
-      this.rebindEventThread();
-      this.input.openInEditor();
-      return;
-    }
-
-    if (
-      !this.ui.cli.disableLazygit &&
-      key.code === "char" &&
-      key.ch === "h" &&
-      key.ctrl
-    ) {
-      this.runLazygit();
-      return;
-    }
-
-    if (this.renderer.chainPrompt !== null && !this.renderer.chainButMode) {
-      if (key.code === "char" && (key.ch === "y" || key.ch === "Y")) {
-        this.renderer.chainPrompt = null;
-        const phase = this.chain.pending;
-        this.chain.pending = null;
-        if (phase !== null) {
-          this.chain.labelMsg = null;
-          await this.runChainTransition(phase, null);
-        }
-        return;
-      }
-      if (key.code === "char" && (key.ch === "n" || key.ch === "N")) {
-        this.renderer.chainPrompt = null;
-        this.chain.pending = null;
-        this.chain.labelMsg = null;
-        this.renderer.writeLine("chain declined — won't ask again this session", C_AGENT);
-        const name = this.ui.context.currentPromptName;
-        if (name !== undefined && !this.ui.context.chainDeclined.includes(name)) {
-          this.ui.context.chainDeclined.push(name);
-        }
-        return;
-      }
-      if (key.code === "char" && (key.ch === "b" || key.ch === "B")) {
-        this.renderer.chainButMode = true;
-        this.renderer.chainPrompt = null;
-        this.input.clearBuffer();
-        this.chain.labelMsg =
-          this.chain.pending !== null ? this.chain.pending.chainLabel() : null;
-        return;
-      }
-      return;
-    }
-
-    if (this.renderer.chainButMode && key.code === "esc") {
-      this.renderer.chainButMode = false;
-      if (this.chain.pending !== null) {
-        this.renderer.chainPrompt = { question: this.chain.pending.chainLabel() };
-        this.chain.labelMsg = this.chain.pending.chainLabel();
-      }
-      this.input.clearBuffer();
-      return;
-    }
-
-    const text = this.input.handleKey(key);
-    if (text !== null) {
-      if (this.renderer.isScrolling()) this.renderer.scrollToBottom();
-
-      if (!this.runState.isRunning && this.chain.pending !== null) {
-        const phase = this.chain.pending;
-        this.chain.pending = null;
-        this.chain.labelMsg = null;
-        this.renderer.chainButMode = false;
-        const trimmed = text.trim();
-        if (trimmed === "") {
-          this.chain.pending = phase;
-          this.chain.labelMsg = phase.chainLabel();
-          this.renderer.chainPrompt = { question: phase.chainLabel() };
-          return;
-        }
-        await this.runChainTransition(phase, trimmed);
-        return;
-      }
-
-      const action = classifySubmission(this.runState.isRunning, text);
-      if (action === "ignore") return;
-      if (action === "reject_while_running") {
-        this.renderer.writeLine(
-          "agent is running — wait for it to finish or press Ctrl-C before running a command",
-          C_ERROR,
-        );
-        return;
-      }
-      if (action === "queue") {
-        this.runState.pendingInputs.push(text);
-        this.renderer.writeLine(`queued: ${sanitizeOutput(text)}`, C_TOOL);
-        return;
-      }
-
-      {
-        const t = text.trimStart();
-        if (t === "/queue" || t.startsWith("/queue ")) {
-          this.runQueueCommand(t.slice("/queue".length).trim());
-          return;
-        }
-      }
-      {
-        const t = text.trimStart();
-        if (t === "/btw" || t.startsWith("/btw ")) {
-          await this.runBtw(text);
-          return;
-        }
-      }
-
-      if (await this.handleDotCommand(text)) return;
-
-      if (text.startsWith("/")) {
-        await this.runSlashCommand(text);
-      } else if (text.startsWith("!")) {
-        await this.runBangCommand(text);
+    try {
+      const history = this.ui.convertHistory(this.ui.session);
+      const runner = await this.runState.agent.spawnRunner(text, history, this.ui.cfg.retry);
+      const raw = runner as unknown as {
+        events?: unknown;
+        abortHandle?: { abort(): void };
+        abort?: () => void;
+      };
+      const rawEvents = raw.events as { tryNext?: unknown } | undefined;
+      if (raw.abortHandle !== undefined && rawEvents !== undefined && typeof rawEvents.tryNext === "function") {
+        this.runState.agentRx = runner.events;
+        this.runState.mainAbort = runner.abortHandle;
       } else {
-        for (const line of text.split("\n")) {
-          this.renderer.writeLine(`> ${sanitizeOutput(line)}`, "green");
-        }
-        this.renderer.writeLine("", "white");
-        await this.startMainRun(text);
+        const queue = new EventQueue<AgentEvent>();
+        this.runState.agentRx = queue;
+        this.runState.mainAbort = {
+          abort: () => {
+            try {
+              raw.abort?.();
+            } catch {
+            }
+          },
+        };
+        void (async () => {
+          try {
+            const iterable = raw.events as AsyncIterable<Record<string, unknown>>;
+            for await (const ev of iterable) {
+              const type = ev["type"];
+              if (type === "token" && typeof ev["text"] === "string") {
+                queue.push({ type: "token", text: ev["text"] as string });
+              } else if (type === "reasoning" && typeof ev["text"] === "string") {
+                queue.push({ type: "reasoning", text: ev["text"] as string });
+              } else if (type === "done") {
+                queue.push({
+                  type: "done",
+                  response: typeof ev["output"] === "string" ? (ev["output"] as string) : "",
+                  inputTokens: 0,
+                  outputTokens: 0,
+                  cachedInputTokens: 0,
+                  cacheCreationInputTokens: 0,
+                });
+              } else if (type === "error") {
+                queue.push({
+                  type: "error",
+                  message: typeof ev["message"] === "string" ? (ev["message"] as string) : "agent error",
+                });
+              }
+            }
+          } catch (e) {
+            queue.push({ type: "error", message: e instanceof Error ? e.message : String(e) });
+          } finally {
+            queue.close();
+          }
+        })();
       }
+      this.runState.isRunning = true;
+      this.running = true;
+      this.shell.running = true;
+      this.ui.statusSignals?.sendStart();
+    } catch (e) {
+      this.shell.feedLine(`error: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    this.refreshStatus();
+  }
+
+  private abortMainRun(): void {
+    try {
+      this.runState.mainAbort?.abort();
+    } catch {
+    }
+    this.runState.isRunning = false;
+    this.running = false;
+    this.shell.running = false;
+    this.shell.endStream();
+    this.streamKind = null;
+    this.shell.feedLine("aborted");
+    try {
+      this.ui.statusSignals?.sendStop();
+    } catch {
+    }
+    this.refreshStatus();
+  }
+
+  private async drainAgentEvents(): Promise<void> {
+    const rx = this.runState.agentRx;
+    if (rx === null) return;
+    let event: AgentEvent | null;
+    while ((event = rx.tryNext()) !== null) {
+      await this.handleAgentEvent(event);
+    }
+  }
+
+  private addUsage(
+    inputTokens: number,
+    outputTokens: number,
+    cached: number,
+    cacheCreation: number,
+    addCost: boolean,
+  ): void {
+    const session = this.ui.session;
+    session.totalInputTokens += inputTokens;
+    session.totalOutputTokens += outputTokens;
+    session.totalCachedInputTokens += cached;
+    session.totalCacheCreationInputTokens += cacheCreation;
+    if (addCost) {
+      const anthropic = configIsAnthropicNative(this.ui.cfg, session.provider, session.model);
+      session.totalCost += estimateCost(
+        billableInputTokens(anthropic, inputTokens, cached, cacheCreation),
+        outputTokens,
+        session.inputTokenCost,
+        session.outputTokenCost,
+      );
     }
   }
 
   private async handleAgentEvent(event: AgentEvent): Promise<void> {
-    if (event.type === "tool_call") {
-      if (this.runState.turnTrace.length < TURN_TRACE_MAX) {
-        this.runState.turnTrace.push(`→ ${formatToolCallSummary(event.name, event.args)}`);
+    switch (event.type) {
+      case "token": {
+        if (this.streamKind !== "agent") {
+          this.shell.endStream();
+          this.streamKind = "agent";
+        }
+        this.shell.appendStream(event.text);
+        return;
       }
-    } else if (event.type === "tool_result") {
-      if (this.runState.turnTrace.length < TURN_TRACE_MAX) {
-        this.runState.turnTrace.push(`← ${truncateCjk(event.output, 500, "…")}`);
+      case "reasoning": {
+        if (!this.slashState.showReasoning) return;
+        if (this.streamKind !== "reasoning") {
+          this.shell.endStream();
+          this.streamKind = "reasoning";
+        }
+        this.shell.appendStream(event.text);
+        return;
       }
-    } else if (event.type === "done" || event.type === "error") {
-      this.runState.turnTrace = [];
-      this.runState.awaitingCompactionRelief = false;
-    }
-
-    const loopRunning = this.chain.loopState !== null && this.chain.loopState.active;
-    if (
-      event.type === "completion_call" &&
-      this.runState.isRunning &&
-      !loopRunning &&
-      !this.ui.cli.noSession &&
-      resolveCompactEnabled(this.ui.cfg) &&
-      this.ui.session.contextWindow > 0
-    ) {
-      const threshold = resolveMidTurnCompactThreshold(this.ui.cfg);
-      if (threshold !== null) {
-        const anthropic = configIsAnthropicNative(
-          this.ui.cfg,
-          this.ui.session.provider,
-          this.ui.session.model,
-        );
-        const realInput = realInputTokens(
-          anthropic,
+      case "tool_call": {
+        this.shell.endStream();
+        this.streamKind = null;
+        const sessionCallId = this.ui.session.addToolCall(event.name, event.args);
+        this.toolCallMap.set(event.callId, sessionCallId);
+        this.lastSessionCallId = sessionCallId;
+        this.shell.feedLine(`◈ ${toolSummary(event.name, event.args)}`);
+        await this.saveSession();
+        return;
+      }
+      case "subagent_tool_call": {
+        this.ui.session.addSubagentToolCall(this.lastSessionCallId, event.name, event.args);
+        this.shell.feedLine(`⌥ ${toolSummary(event.name, event.args)}`);
+        await this.saveSession();
+        return;
+      }
+      case "tool_result": {
+        const sessionCallId = this.toolCallMap.get(event.callId) ?? this.lastSessionCallId;
+        this.ui.session.addToolResult(sessionCallId, event.name, event.output);
+        this.shell.feedLine(`✓ ${event.name}`);
+        await this.saveSession();
+        return;
+      }
+      case "completion_call": {
+        this.addUsage(
           event.inputTokens,
+          event.outputTokens,
           event.cachedInputTokens,
           event.cacheCreationInputTokens,
+          false,
         );
-        const pressure = realInput / this.ui.session.contextWindow;
-        if (pressure > threshold) {
-          if (this.runState.awaitingCompactionRelief) {
-            this.stopContextExhausted(realInput, threshold);
-            this.runState.awaitingCompactionRelief = false;
-          } else {
-            await this.midTurnCompact(pressure);
-            this.runState.awaitingCompactionRelief = true;
+        return;
+      }
+      case "done": {
+        this.shell.endStream();
+        this.streamKind = null;
+        this.ui.session.addMessage("assistant", event.response);
+        this.addUsage(
+          event.inputTokens,
+          event.outputTokens,
+          event.cachedInputTokens,
+          event.cacheCreationInputTokens,
+          true,
+        );
+        this.running = false;
+        this.shell.running = false;
+        this.runState.isRunning = false;
+        try {
+          this.ui.statusSignals?.sendStop();
+        } catch {
+        }
+        await this.saveSession();
+        this.refreshStatus();
+        return;
+      }
+      case "retrying": {
+        this.shell.feedLine(`retrying ${event.attempt}/${event.max}...`);
+        return;
+      }
+      case "error": {
+        this.shell.endStream();
+        this.streamKind = null;
+        this.shell.feedLine(`error: ${event.message}`);
+        this.running = false;
+        this.shell.running = false;
+        this.runState.isRunning = false;
+        try {
+          this.ui.statusSignals?.sendStop();
+        } catch {
+        }
+        await this.saveSession();
+        this.refreshStatus();
+        return;
+      }
+    }
+  }
+
+  private drainBtwEvents(): void {
+    for (const active of [...this.btwActive]) {
+      let event: BtwEvent | null;
+      while ((event = active.queue.tryNext()) !== null) {
+        if (event.type === "done") {
+          this.shell.feedLine(`[btw #${active.id}]`);
+          for (const line of event.response.split("\n")) {
+            this.shell.feedLine(line);
           }
-          this.refresh();
-          return;
+          this.btwActive = this.btwActive.filter((item) => item !== active);
+        } else {
+          this.shell.feedLine(`[btw #${active.id}] error: ${event.message}`);
+          this.btwActive = this.btwActive.filter((item) => item !== active);
         }
-        this.runState.awaitingCompactionRelief = false;
-      }
-    }
-
-    const turnErrored = event.type === "error";
-    const isTerminal = event.type === "done" || event.type === "error";
-    const isBashResult = event.type === "tool_result" && event.name === "bash";
-    await handleAgentEventInner(event, this.renderer, this.runState, this.ui, this.slash, this.chain);
-
-    if (isBashResult) await this.refreshGitStateAsync();
-
-    await this.finalizeTurn(turnErrored);
-
-    if (isTerminal || !this.runState.isRunning) this.refresh();
-  }
-
-  private async finalizeTurn(turnErrored: boolean): Promise<void> {
-    if (turnErrored) {
-      const text = this.runState.pendingSend;
-      this.runState.pendingSend = null;
-      if (text !== null) {
-        const len = this.ui.session.messages.length;
-        if (
-          len > 0 &&
-          this.ui.session.messages[len - 1].role === "user"
-        ) {
-          this.ui.session.truncateTo(len - 1);
-        }
-        this.input.loadText(text);
-      }
-    } else if (!this.runState.isRunning) {
-      this.runState.pendingSend = null;
-    }
-
-    if (!this.runState.isRunning && this.chain.dotPromptRestore !== null) {
-      const restoreName = this.chain.dotPromptRestore;
-      this.chain.dotPromptRestore = null;
-      this.ui.context.currentPrompt = this.ui.context.prompts.get(restoreName);
-      this.ui.context.currentPromptName =
-        this.ui.context.currentPrompt !== undefined ? restoreName : undefined;
-      this.ui.session.prompt =
-        this.ui.context.currentPromptName !== undefined
-          ? {
-              name: this.ui.context.currentPromptName,
-              source: this.ui.context.promptSource?.(this.ui.context.currentPromptName) ?? "user_file",
-            }
-          : null;
-      this.ui.permission?.restoreUserMode();
-    }
-
-    if (
-      !turnErrored &&
-      !this.runState.isRunning &&
-      this.chain.pending === null &&
-      this.chainPhaseFromPrompt !== null &&
-      this.ui.context.currentPromptName !== undefined &&
-      !this.ui.context.chainDeclined.includes(this.ui.context.currentPromptName)
-    ) {
-      const phase = this.chainPhaseFromPrompt(this.ui.context.currentPromptName);
-      if (phase !== null && phase.isEnabled(this.ui.cfg.chain)) {
-        this.chain.pending = phase;
-        this.chain.labelMsg = phase.chainLabel();
-        this.renderer.chainButMode = false;
-        this.renderer.chainPrompt = { question: phase.chainLabel() };
-      }
-    }
-
-    if (!this.runState.isRunning) {
-      this.runState.mainAbort = null;
-      const next = this.runState.pendingInputs.shift();
-      if (next !== undefined) {
-        this.renderer.chainPrompt = null;
-        this.renderer.chainButMode = false;
-        this.chain.pending = null;
-        this.chain.labelMsg = null;
-        for (const line of next.split("\n")) {
-          this.renderer.writeLine(`> ${sanitizeOutput(line)}`, "green");
-        }
-        this.renderer.writeLine("", "white");
-        await this.startMainRun(next);
       }
     }
   }
 
-  private abortMainRun(): void {
-    this.runState.mainAbort?.abort();
-    this.runState.mainAbort = null;
-    this.ui.sandbox.killActive();
-    this.runState.isRunning = false;
-    this.ui.statusSignals?.sendStop();
-    this.runState.agentRx = null;
-    this.runState.turnTrace = [];
-    this.runState.awaitingCompactionRelief = false;
-    this.runState.clearPendingToolCalls();
-    this.runState.pendingInputs = [];
-    if (this.chain.loopState !== null) {
-      this.chain.loopState.active = false;
-      this.chain.loopLabel = null;
-    }
-    if (this.input.buffer !== "") this.input.clearBuffer();
-    if (this.chain.dotPromptRestore !== null) {
-      const restoreName = this.chain.dotPromptRestore;
-      this.chain.dotPromptRestore = null;
-      this.ui.context.currentPrompt = this.ui.context.prompts.get(restoreName);
-      this.ui.context.currentPromptName =
-        this.ui.context.currentPrompt !== undefined ? restoreName : undefined;
-      this.ui.session.prompt =
-        this.ui.context.currentPromptName !== undefined
-          ? {
-              name: this.ui.context.currentPromptName,
-              source: this.ui.context.promptSource?.(this.ui.context.currentPromptName) ?? "user_file",
-            }
-          : null;
-      this.ui.permission?.restoreUserMode();
-    }
-    this.renderer.writeLine(
-      "interrupted (changes may be partial; review with git diff)",
-      C_ERROR,
-    );
-  }
-
-  private async resolvePrebuild(): Promise<void> {
-    if (this.runState.agent !== null) return;
-    if (this.prebuildPromise !== null) {
-      const agent = await this.prebuildPromise;
-      if (agent !== null) this.takePrebuild(agent, false);
-    }
-  }
-
-  private async startMainRun(text: string): Promise<void> {
-    await this.resolvePrebuild();
-    await startMainRunFromMod(text, this.runState, this.ui, this.slash);
-  }
-
-  private async ensureAgent(): Promise<void> {
-    await ensureAgent(this.runState, this.ui, this.slash.reasoningEnabled);
-  }
-
-  private async runChainTransition(
-    phase: import("./state.ts").ChainPhase,
-    extra: string | null,
-  ): Promise<void> {
-    const nextName = phase.nextPromptName();
-    applyPromptMode(nextName, this.ui.context, this.ui.session, this.ui.permission);
-    if (this.applyPromptModelFn !== undefined) {
-      await this.applyPromptModelFn(
-        nextName,
-        this.ui,
-        this.runState.agent,
-        this.slash.reasoningEnabled,
-        this.renderer,
-      );
-    }
-    const baseMsg = phase.transitionMessage();
-    const msg = extra !== null ? `${baseMsg}\n\nAdditional instructions: ${extra}` : baseMsg;
-    for (const line of msg.split("\n")) {
-      this.renderer.writeLine(`> ${sanitizeOutput(line)}`, "green");
-    }
-    this.renderer.writeLine("", "white");
-    this.ui.session.addMessage("user", msg);
-    this.runState.agent = null;
-    await this.startMainRun(msg);
-  }
-
-  private async handleDotCommand(text: string): Promise<boolean> {
-    if (!text.startsWith(".")) return false;
-    const afterDot = text.slice(1).trimStart();
-
-    for (const line of text.split("\n")) {
-      this.renderer.writeLine(`> ${sanitizeOutput(line)}`, "green");
-    }
-    this.renderer.writeLine("", "white");
-
-    if (afterDot === "") {
-      this.input.loadText(".");
-      this.input.startDotPicker();
-      return true;
-    }
-
-    const spaceIdx = afterDot.search(/\s/);
-    if (spaceIdx >= 0) {
-      const promptName = afterDot.slice(0, spaceIdx).trim();
-      const msg = afterDot.slice(spaceIdx).trim();
-      if (promptName !== "" && this.ui.context.prompts.has(promptName)) {
-        this.chain.dotPromptRestore = this.ui.context.currentPromptName ?? null;
-        applyPromptMode(promptName, this.ui.context, this.ui.session, this.ui.permission);
-        if (this.applyPromptModelFn !== undefined) {
-          await this.applyPromptModelFn(
-            promptName,
-            this.ui,
-            this.runState.agent,
-            this.slash.reasoningEnabled,
-            this.renderer,
-          );
-        }
-        this.runState.agent = null;
-
-        await this.runPlainMessage(msg);
-        return true;
-      }
-      this.renderer.writeLine(`error: unknown prompt '${promptName}'`, C_ERROR);
-      return true;
-    }
-
-    const promptName = afterDot.trim();
-    if (this.ui.context.prompts.has(promptName)) {
-      applyPromptMode(promptName, this.ui.context, this.ui.session, this.ui.permission);
-      if (this.applyPromptModelFn !== undefined) {
-        await this.applyPromptModelFn(
-          promptName,
-          this.ui,
-          this.runState.agent,
-          this.slash.reasoningEnabled,
-          this.renderer,
-        );
-      }
-      this.runState.agent = null;
-      this.renderer.writeLine(`switched to prompt '${promptName}'`, C_AGENT);
-      await this.saveSession();
-      return true;
-    }
-    this.renderer.writeLine(`error: unknown prompt '${promptName}'`, C_ERROR);
-    return true;
-  }
-
-  private async runPlainMessage(msg: string): Promise<void> {
-    if (msg === "") return;
-    for (const line of msg.split("\n")) {
-      this.renderer.writeLine(`> ${sanitizeOutput(line)}`, "green");
-    }
-    this.renderer.writeLine("", "white");
-    await this.startMainRun(msg);
+  private drainAskEvents(): void {
+    if (this.askEvents === null || this.askPrompt !== null) return;
+    const req = this.askEvents.tryNext();
+    if (req === null) return;
+    this.askPrompt = req;
+    this.shell.askActive = true;
+    this.shell.feedLine(`Allow tool '${req.tool}'?`);
+    this.shell.feedLine(`  ${singleLine(req.input, 160)}`);
+    this.shell.feedLine("  y allow once | a allow always | n deny");
+    this.refreshStatus();
   }
 
   private runQueueCommand(arg: string): void {
     switch (arg) {
       case "clear": {
-        const n = this.runState.pendingInputs.length;
-        this.runState.pendingInputs = [];
-        this.renderer.writeLine(`queue cleared (${n} removed)`, C_TOOL);
-        break;
+        const count = this.queued.length;
+        this.queued = [];
+        this.shell.feedLine(`queue cleared (${count} removed)`);
+        return;
       }
       case "pop": {
-        const x = this.runState.pendingInputs.pop();
-        if (x !== undefined) {
-          this.renderer.writeLine(`unqueued: ${sanitizeOutput(x)}`, C_TOOL);
-        } else {
-          this.renderer.writeLine("queue is empty", C_TOOL);
-        }
-        break;
+        const item = this.queued.pop();
+        if (item !== undefined) this.shell.feedLine(`unqueued: ${item}`);
+        else this.shell.feedLine("queue is empty");
+        return;
       }
       case "":
       case "ls":
       case "list": {
-        if (this.runState.pendingInputs.length === 0) {
-          this.renderer.writeLine("queue is empty", C_TOOL);
+        if (this.queued.length === 0) {
+          this.shell.feedLine("queue is empty");
         } else {
-          this.renderer.writeLine(`queued (${this.runState.pendingInputs.length}):`, C_TOOL);
-          this.runState.pendingInputs.forEach((q, i) => {
-            this.renderer.writeLine(`  ${i + 1}. ${sanitizeOutput(q)}`, C_TOOL);
+          this.shell.feedLine(`queued (${this.queued.length}):`);
+          this.queued.forEach((item, idx) => {
+            this.shell.feedLine(`  ${idx + 1}. ${item}`);
           });
         }
-        break;
+        return;
       }
       default:
-        this.renderer.writeLine("usage: /queue [ls|clear|pop]", C_ERROR);
-        break;
+        this.shell.feedLine("usage: /queue [ls|clear|pop]");
+        return;
     }
   }
 
   private async runBtw(text: string): Promise<void> {
-    for (const line of text.split("\n")) {
-      this.renderer.writeLine(`> ${sanitizeOutput(line)}`, "green");
+    if (text === "") {
+      this.shell.feedLine("usage: /btw <message>");
+      return;
     }
-    this.renderer.writeLine("", "white");
-    const btwText = text.trimStart().slice("/btw".length).trim();
-    if (btwText === "") {
-      this.renderer.writeLine("usage: /btw <message>", C_AGENT);
+    if (this.runState.agent === null) {
+      try {
+        this.runState.agent = await this.ui
+          .agentBuildCtx()
+          .rebuildAgent(this.ui.session.model, true);
+      } catch (e) {
+        this.shell.feedLine(`error: ${e instanceof Error ? e.message : String(e)}`);
+        return;
+      }
+    }
+    const agent = this.runState.agent;
+    if (agent.spawnBtw === undefined) {
+      this.shell.feedLine("side-question agent unavailable");
       return;
     }
     const id = this.btwNextId;
     this.btwNextId = (this.btwNextId + 1) >>> 0;
+    const queue = new EventQueue<BtwEvent>();
     const snapshot = {
-      messages: this.ui.session.messages.map((m) => ({ role: m.role, content: m.content })),
-      turnTrace: [...this.runState.turnTrace],
-      isRunning: this.runState.isRunning,
+      messages: this.ui.session.messages.map((m) => ({
+        role: (m as { role?: unknown }).role,
+        content: String((m as { content?: unknown }).content ?? ""),
+      })),
+      turnTrace: [],
+      isRunning: this.running,
     };
-    await this.ensureAgent();
-    const agent = this.runState.agent;
-    if (agent === null || agent.spawnBtw === undefined) {
-      this.renderer.writeLine("[btw] error: side-question agent unavailable", C_ERROR);
+    try {
+      await agent.spawnBtw(text, snapshot, queue, id, this.ui.cfg.retry);
+      this.btwActive.push({ queue, id });
+      this.shell.feedLine(`[btw #${id}] thinking...`);
+    } catch (e) {
+      this.shell.feedLine(`error: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  private uiCfg(): ConfigLike {
+    return this.ui.cfg as unknown as ConfigLike;
+  }
+
+  private uiApiKeys(): Record<string, string> | undefined {
+    return this.uiCfg().apiKeys ?? undefined;
+  }
+
+  private async saveUiCfg(): Promise<void> {
+    try {
+      await saveConfig(this.ui.cfg as unknown as Config);
+    } catch {
+    }
+  }
+
+  private async runPanelCommand(text: string): Promise<void> {
+    switch (text) {
+      case "/provider": {
+        await this.liveProviderFlow();
+        return;
+      }
+      case "/model": {
+        await this.liveModelFlow();
+        return;
+      }
+      case "/models": {
+        await this.liveModelsFlow();
+        return;
+      }
+      case "/prompt": {
+        const current = this.ui.context.currentPromptName;
+        const items: PanelItem[] = [
+          { label: "default", detail: "clear prompt" },
+          ...[...this.ui.context.prompts.keys()].sort().map((name) => ({
+            label: name,
+            detail: name === current ? "current" : "",
+          })),
+        ];
+        const idx = await this.shell.openPanel("prompt", items, "prompt | ↑↓ move | type to filter | Enter switch | Esc back");
+        if (idx === null) {
+          this.shell.setStatus("prompt selection cancelled");
+          return;
+        }
+        await this.runSlash(`/prompt ${items[idx]!.label}`);
+        this.shell.setStatus(`prompt: ${items[idx]!.label}`);
+        return;
+      }
+      case "/theme": {
+        const current = this.ui.context.currentThemeName;
+        const items: PanelItem[] = [
+          { label: "default", detail: "clear theme" },
+          ...[...this.ui.context.themes.keys()].sort().map((name) => ({
+            label: name,
+            detail: name === current ? "current" : "",
+          })),
+        ];
+        const idx = await this.shell.openPanel("theme", items, "theme | ↑↓ move | type to filter | Enter switch | Esc back");
+        if (idx === null) {
+          this.shell.setStatus("theme selection cancelled");
+          return;
+        }
+        await this.runSlash(`/theme ${items[idx]!.label}`);
+        this.shell.setStatus(`theme: ${items[idx]!.label}`);
+        return;
+      }
+      case "/sessions": {
+        const sessions = listSessionFiles();
+        const items: PanelItem[] = sessions.map((s) => ({
+          label: s.id,
+          detail: `${s.provider} / ${s.model} | ${s.messages} msgs`,
+        }));
+        const idx = await this.shell.openPanel("sessions", items, "sessions | ↑↓ move | type to filter | Enter detail | Esc back");
+        if (idx === null) {
+          this.shell.setStatus("sessions selection cancelled");
+          return;
+        }
+        const s = sessions[idx]!;
+        const detail: PanelItem[] = [
+          { label: `session: ${s.id}` },
+          { label: `provider: ${s.provider}` },
+          { label: `model: ${s.model}` },
+          { label: `messages: ${s.messages}` },
+          { label: "resume with /resume after configuring a key" },
+        ];
+        await this.shell.openPanel("session detail", detail, "session detail | Enter or Esc to go back");
+        this.shell.setStatus(`session: ${s.id}`);
+        return;
+      }
+      case "/help": {
+        const items: PanelItem[] = SLASH_COMMANDS.map((name) => ({
+          label: `/${name}`,
+          detail: slashDescription(name),
+        }));
+        const idx = await this.shell.openPanel("commands", items, "commands | ↑↓ move | type to filter | Enter run | Esc back");
+        if (idx === null) {
+          this.shell.setStatus("help cancelled");
+          return;
+        }
+        const name = SLASH_COMMANDS[idx]!;
+        if (name === "help") {
+          this.shell.setStatus("commands listed");
+          return;
+        }
+        if (name === "quit" || name === "exit") {
+          this.shell.requestQuit();
+          return;
+        }
+        await this.submit(`/${name}`);
+        return;
+      }
+      default:
+        return;
+    }
+  }
+
+  private async liveProviderFlow(): Promise<void> {
+    const items: PanelItem[] = PROVIDER_NAMES.map((name) => ({
+      label: name,
+      detail: `${name === this.ui.session.provider ? "current · " : ""}${providerKeyState(this.uiApiKeys(), name)}`,
+    }));
+    const idx = await this.shell.openPanel("provider", items, "provider | ↑↓ move | type to filter | Enter switch | Esc back");
+    if (idx === null) {
+      this.shell.setStatus("provider selection cancelled");
       return;
     }
-    try {
-      const runner = await agent.spawnBtw(btwText, snapshot, this.btwEvents, id, this.ui.cfg.retry);
-      this.btwAbort.push([id, runner.abortHandle]);
-      this.btwInflight += 1;
-      this.renderer.writeLine(`[btw #${id}] thinking...`, C_BTW);
-    } catch (e) {
-      this.renderer.writeLine(
-        `[btw] error: ${e instanceof Error ? e.message : String(e)}`,
-        C_ERROR,
-      );
+    const name = PROVIDER_NAMES[idx]!;
+    if (providerKeyState(this.uiApiKeys(), name) === "needs key") {
+      const key = await this.shell.openMasked(`API key for ${name}`, `API key for ${name} (${providerEnvName(name)}) | Enter save | Esc cancel`);
+      if (key === null) {
+        this.shell.setStatus("provider key entry cancelled");
+        return;
+      }
+      const cfg = this.uiCfg();
+      cfg.provider = name;
+      cfg.apiKeys = { ...(cfg.apiKeys ?? {}), [name]: key };
+      await this.saveUiCfg();
+      this.runState.agent = null;
+      this.noKey = false;
+      await this.runSlash(`/provider ${name}`);
+      await this.liveModelFlow();
+      this.shell.setStatus(`provider: ${name} (key saved)`);
+      return;
+    }
+    const cfg = this.uiCfg();
+    cfg.provider = name;
+    await this.saveUiCfg();
+    this.runState.agent = null;
+    await this.runSlash(`/provider ${name}`);
+    await this.liveModelFlow();
+    this.shell.setStatus(`provider: ${name}`);
+  }
+
+  private async liveModelFlow(): Promise<void> {
+    const provider = this.ui.session.provider;
+    const catalog = [...(catalogEntries(provider) ?? [])];
+    const items: PanelItem[] = catalog.map((m) => ({ label: m.id, detail: provider }));
+    const quick = Object.entries(this.uiCfg().quickModels ?? {}).sort(([a], [b]) => (a < b ? -1 : 1));
+    const quickStart = items.length;
+    for (const [qname, q] of quick) items.push({ label: qname, detail: `quick · ${q.provider} / ${q.model}` });
+    const idx = await this.shell.openPanel(`model (${provider})`, items, "model | ↑↓ move | type to filter | Enter switch | Esc back");
+    if (idx === null) {
+      this.shell.setStatus("model selection cancelled");
+      return;
+    }
+    if (idx >= quickStart) {
+      await this.runSlash(`/models ${quick[idx - quickStart]![0]}`);
+      this.shell.setStatus(`model: ${quick[idx - quickStart]![0]}`);
+    } else {
+      await this.runSlash(`/model ${catalog[idx]!.id}`);
+      this.shell.setStatus(`model: ${catalog[idx]!.id}`);
     }
   }
 
-  private async runSlashCommand(text: string): Promise<void> {
-    for (const line of text.split("\n")) {
-      this.renderer.writeLine(`> ${sanitizeOutput(line)}`, "green");
+  private async liveModelsFlow(): Promise<void> {
+    const quick = Object.entries(this.uiCfg().quickModels ?? {}).sort(([a], [b]) => (a < b ? -1 : 1));
+    if (quick.length === 0) {
+      this.shell.setStatus("no quick models saved");
+      return;
     }
-    this.renderer.writeLine("", "white");
+    const items: PanelItem[] = quick.map(([qname, q]) => ({ label: qname, detail: `${q.provider} / ${q.model}` }));
+    const idx = await this.shell.openPanel("quick models", items, "quick models | ↑↓ move | type to filter | Enter switch | Esc back");
+    if (idx === null) {
+      this.shell.setStatus("quick model selection cancelled");
+      return;
+    }
+    await this.runSlash(`/models ${quick[idx]![0]}`);
+    this.shell.setStatus(`model: ${quick[idx]![0]}`);
+  }
 
+  private async runSlash(text: string): Promise<void> {
+    for (const line of text.split("\n")) {
+      this.shell.feedLine(`> ${line}`);
+    }
+    if (this.slashHandler === null) {
+      this.shell.feedLine("error: slash commands unavailable");
+      return;
+    }
     const result = await this.slashHandler(text, {
-      renderer: this.renderer,
-      input: this.input,
+      renderer: this.rendererAdapter(),
+      input: this.inputAdapter(),
       run: this.runState,
       ui: this.ui,
-      slash: this.slash,
-      chain: this.chain,
+      slash: this.slashState,
+      chain: this.chainState,
     });
-
-    if (this.warmModelCacheFn !== undefined) {
-      const provider = this.ui.session.provider;
-      const isCustom = (this.ui.cfg.customProviders ?? {})[provider] !== undefined;
-      try {
-        const ids = await this.warmModelCacheFn(provider, isCustom, this.ui.client, this.ui.cli, this.ui.cfg);
-        this.input.setLiveModelNames(ids);
-      } catch {
-
-      }
+    if (result["ok"] === true) {
+      await this.saveSession();
+      return;
     }
-
-    await this.handleSlashResult(result);
-    await this.saveSession();
-  }
-
-  private async handleSlashResult(result: SlashResult): Promise<void> {
-    if (result.ok) return;
-    if (result.outcome !== undefined) {
-      const outcome = result.outcome;
+    const outcome = result["outcome"] as
+      | { kind?: string; instructions?: string | null; message?: string; path?: string }
+      | undefined;
+    if (outcome !== undefined) {
       switch (outcome.kind) {
         case "defer_compress": {
           try {
-            await this.ui.handleCompress(outcome.instructions ?? null, false, this.runState.agent, this.slash.reasoningEnabled);
+            await this.ui.handleCompress(outcome.instructions ?? null, false, this.runState.agent, this.slashState.reasoningEnabled);
           } catch (e) {
-            this.renderer.writeLine(
-              `compress error: ${e instanceof Error ? e.message : String(e)}`,
-              C_ERROR,
-            );
+            this.shell.feedLine(`compress error: ${e instanceof Error ? e.message : String(e)}`);
           }
           await this.saveSession();
           return;
         }
         case "defer_init": {
-          await this.ensureAgent();
-          const history = this.ui.convertHistory(this.ui.session);
-          if (this.runState.agent !== null) {
-            const runner = await this.runState.agent.spawnRunner(
-              AGENTS_CREATION_PROMPT,
-              history,
-              this.ui.cfg.retry,
-            );
-            this.runState.agentRx = runner.events;
-            this.runState.mainAbort = runner.abortHandle;
-            this.runState.isRunning = true;
-            this.ui.statusSignals?.sendStart();
-          }
+          await this.startMainRun(
+            "Create an AGENTS.md file in the current project that describes how to build, test, and work in this codebase, based on what you can see in the repository. Keep it concise and factual.",
+          );
           return;
         }
         case "defer_review": {
-          this.chain.dotPromptRestore = this.ui.context.oneShotRestore ?? null;
-          this.ui.session.addMessage("user", outcome.message);
-          await this.ensureAgent();
-          const history = this.ui.convertHistory(this.ui.session);
-          if (this.runState.agent !== null) {
-            const runner = await this.runState.agent.spawnRunner(
-              outcome.message,
-              history,
-              this.ui.cfg.retry,
-            );
-            this.runState.agentRx = runner.events;
-            this.runState.mainAbort = runner.abortHandle;
-            this.runState.isRunning = true;
-            this.ui.statusSignals?.sendStart();
-          }
+          const message = outcome.message ?? "";
+          this.ui.session.addMessage("user", message);
+          await this.startMainRun(message);
           return;
         }
         case "defer_editor": {
-          const editor = this.ui.cfg.editor ?? process.env["EDITOR"] ?? "vi";
-          const mouseCapture = resolveMouseCapture(this.ui.cfg);
-          suspendTui(mouseCapture, () => {
+          const editor = (this.ui.cfg as unknown as { editor?: string }).editor ?? process.env["EDITOR"] ?? "vi";
+          const editorPath = outcome.path ?? "";
+          this.shell.suspendEditor(() => {
             const [prog, args] = parseEditorCommand(editor);
             try {
-              spawnSync(prog, [...args, outcome.path], { stdio: "inherit" });
+              spawnSync(prog, [...args, editorPath], { stdio: "inherit" });
             } catch {
-
             }
           });
-          renderSession(this.renderer, this.ui.session, this.ui.cli, this.ui.cfg, this.ui.context);
-          this.renderer.writeLine(`returned from editing ${outcome.path}`, C_AGENT);
+          this.shell.feedLine(`returned from editing ${editorPath}`);
           return;
         }
+        default:
+          break;
       }
     }
-    this.renderer.writeLine(`error: ${result.error}`, C_ERROR);
+    const error = result["error"];
+    this.shell.feedLine(`error: ${error !== undefined ? String(error) : "slash command failed"}`);
+    await this.saveSession();
   }
 
-  private async runBangCommand(text: string): Promise<void> {
+  private runBang(text: string): void {
     const cmd = text.slice(1).trim();
     if (cmd === "") {
-      this.renderer.writeLine("error: empty command after '!'", C_ERROR);
+      this.shell.feedLine("error: empty command after '!'");
       return;
     }
     for (const line of text.split("\n")) {
-      this.renderer.writeLine(`> ${sanitizeOutput(line)}`, "green");
+      this.shell.feedLine(`> ${line}`);
     }
-    this.renderer.writeLine("", "white");
-
     const out = spawnSync("bash", ["-c", cmd], { encoding: "utf8" });
     let result = "";
     if (out.stdout !== "") result += out.stdout;
@@ -1655,425 +1250,342 @@ export class App {
       result += out.stderr;
     }
     result = result.trim();
-
     for (const line of result.split("\n")) {
-      this.renderer.writeLine(
-        sanitizeOutput(line),
-        out.status === 0 ? C_AGENT : C_ERROR,
-      );
+      this.shell.feedLine(line);
     }
-    this.renderer.writeLine("", "white");
-
     this.ui.session.addMessage("user", text);
     this.ui.session.addMessage("assistant", result);
-    await this.saveSession();
-    await this.refreshGitStateAsync();
-  }
-
-  private async midTurnCompact(pressure: number): Promise<void> {
-    await midTurnCompactAndRespawn(pressure, this.renderer, this.runState, this.ui, this.slash);
-  }
-
-  private stopContextExhausted(promptTokens: number, threshold: number): void {
-    stopTurnContextExhausted(promptTokens, threshold, this.renderer, this.ui, this.runState);
-  }
-
-  private handleBtwEvent(bev: BtwEvent): void {
-    if (bev.type === "done") {
-      const anthropic = configIsAnthropicNative(
-        this.ui.cfg,
-        this.ui.session.provider,
-        this.ui.session.model,
-      );
-      this.btwTotalCost += estimateCost(
-        billableInputTokens(
-          anthropic,
-          bev.inputTokens,
-          bev.cachedInputTokens,
-          bev.cacheCreationInputTokens,
-        ),
-        bev.outputTokens,
-        this.ui.session.inputTokenCost,
-        this.ui.session.outputTokenCost,
-      );
-      this.btwTotalIn += bev.inputTokens;
-      this.btwTotalOut += bev.outputTokens;
-      this.btwAbort = this.btwAbort.filter(([i]) => i !== bev.id);
-      this.btwInflight = Math.max(0, this.btwInflight - 1);
-      this.renderer.writeLine(`[btw #${bev.id}] answer:`, C_BTW);
-      for (const line of bev.response.split("\n")) {
-        this.renderer.writeLine(sanitizeOutput(line), C_AGENT);
-      }
-      this.renderer.writeLine("", "white");
-    } else {
-      this.btwAbort = this.btwAbort.filter(([i]) => i !== bev.id);
-      this.btwInflight = Math.max(0, this.btwInflight - 1);
-      this.renderer.writeLine(
-        `[btw #${bev.id}] error: ${sanitizeOutput(bev.message)}`,
-        C_ERROR,
-      );
-    }
-  }
-
-  private takePrebuild(prebuilt: AnyAgent, _notify: boolean): void {
-    this.runState.agent = prebuilt;
-    this.prebuildPromise = null;
-    this.prebuildDone = true;
-    this.prebuildValue = null;
-  }
-
-  private rebindEventThread(): void {
-    this.eventThread?.stop();
-    this.eventThread = null;
-    this.running = true;
-    const newQueue = new EventQueue<UserEvent>();
-    this.userEvents = newQueue;
-    if (!this.headless) {
-      this.eventThread = spawnEventThread(newQueue, () => this.running);
-    }
-  }
-
-  private runLazygit(): void {
-    const probe = spawnSync("lazygit", ["--version"], { encoding: "utf8" });
-    if (probe.error !== undefined || probe.status !== 0) {
-      this.renderer.writeLine(
-        "warning: lazygit not found — install it (https://github.com/jesseduffield/lazygit)",
-        C_ERROR,
-      );
-      return;
-    }
-    this.eventThread?.stop();
-    this.eventThread = null;
-    const mouseCapture = resolveMouseCapture(this.ui.cfg);
-    suspendTui(mouseCapture, () => {
-      try {
-        spawnSync("lazygit", [], { stdio: "inherit" });
-      } catch {
-
-      }
-    });
-    this.rebindEventThread();
-  }
-
-  private async saveSession(): Promise<void> {
-    if (!this.ui.cli.noSession && this.ui.saveSession !== null) {
-      try {
-        await this.ui.saveSession(this.ui.session);
-      } catch (e) {
-        this.renderer.writeLine(
-          `warning: failed to save session: ${e instanceof Error ? e.message : String(e)}`,
-          C_ERROR,
-        );
-      }
-    }
-  }
-
-  private openModelSwitcher(): void {
-    if (this.runState.isRunning) {
-      this.renderer.writeLine(
-        "agent is running — wait for it to finish or press Ctrl-C before switching models",
-        C_ERROR,
-      );
-      return;
-    }
-    const qm = quickModelsMap(this.ui.cfg);
-    const quick = [...qm.keys()].sort();
-    const provider = this.ui.session.provider;
-    const live = this.cachedModelIdsFn !== undefined ? this.cachedModelIdsFn(provider) : [];
-    this.input.setQuickModelNames(quick);
-    this.input.setLiveModelNames(live);
-    const details = new Map<string, string>();
-    for (const name of quick) {
-      const q = qm.get(name);
-      if (q !== undefined) {
-        details.set(
-          name,
-          `(${q.provider} / ${q.model})  $${q.inputTokenCost.toFixed(4)}/M in  $${q.outputTokenCost.toFixed(4)}/M out`,
-        );
-      }
-    }
-    const currentQuick = quick.find((name) => {
-      const q = qm.get(name);
-      return (
-        q !== undefined &&
-        q.provider === this.ui.session.provider &&
-        q.model === this.ui.session.model
-      );
-    }) ?? null;
-    this.input.startModelSwitcher(quick, live, details, currentQuick, this.ui.session.model);
-  }
-
-  private openPromptSwitcher(): void {
-    if (this.runState.isRunning) {
-      this.renderer.writeLine(
-        "agent is running — wait for it to finish or press Ctrl-C before switching prompts",
-        C_ERROR,
-      );
-      return;
-    }
-    const items = [...this.ui.context.prompts.keys()].sort();
-    this.input.setPromptNames(items);
-    const details = new Map<string, string>();
-    for (const name of items) {
-      const content = this.ui.context.prompts.get(name);
-      if (content !== undefined) {
-        const source = this.ui.context.promptSource?.(name) ?? "user_file";
-        const sourceLabel = source === "built_in" ? "BuiltIn" : "UserFile";
-        const [mode] = parsePromptMode(content);
-        details.set(
-          name,
-          mode !== null ? `${sourceLabel} · mode: ${mode}` : sourceLabel,
-        );
-      }
-    }
-    this.input.startPromptSwitcher(
-      items,
-      details,
-      this.ui.context.currentPromptName ?? null,
-    );
-  }
-
-  private async handleWorktreeAutoMerge(): Promise<void> {
-    const autoMerge = this.ui.cli.resolveWtAutoMerge?.(this.ui.cfg) ?? false;
-    if (!autoMerge) return;
-    const info = detectWorktreeInfo(this.ui.session.workingDir);
-    if (info === null) return;
-    const target = defaultBranch(info.mainRepoPath);
-    this.renderer.writeLine(
-      `auto-merging worktree '${info.branch}' into '${target}'...`,
-      C_AGENT,
-    );
-    let proceed = true;
-    if (worktreeHasUncommitted(info.worktreePath)) {
-      this.renderer.writeLine(
-        "worktree has uncommitted changes. [c]ommit all and continue  [a]bort merge",
-        C_TOOL,
-      );
-      this.ui.statusSignals?.sendGitConflict();
-      const action = await this.readWorktreeKey(["c", "a"]);
-      if (action === "c") {
-        const committed = spawnSync(
-          "git",
-          ["-C", info.worktreePath, "add", "-A"],
-          { encoding: "utf8" },
-        );
-        const commit = spawnSync(
-          "git",
-          ["-C", info.worktreePath, "commit", "--no-edit"],
-          { encoding: "utf8" },
-        );
-        if (committed.status !== 0 || commit.status !== 0) {
-          this.renderer.writeLine("auto-commit failed, merge aborted", C_ERROR);
-          proceed = false;
-        } else {
-          this.renderer.writeLine("committed all worktree changes, proceeding with merge", C_AGENT);
-        }
-      } else {
-        this.renderer.writeLine("merge aborted, worktree left untouched", C_AGENT);
-        proceed = false;
-      }
-    }
-    if (!proceed) return;
-    const force = this.ui.cli.resolveWtForce?.(this.ui.cfg) ?? false;
-    const checkout = spawnSync("git", ["-C", info.mainRepoPath, "checkout", target], {
-      encoding: "utf8",
-    });
-    if (checkout.status !== 0) {
-      this.renderer.writeLine("merge failed: could not check out target branch", C_ERROR);
-      return;
-    }
-    const merge = spawnSync(
-      "git",
-      ["-C", info.mainRepoPath, "merge", "--squash", info.branch],
-      { encoding: "utf8" },
-    );
-    if (merge.status !== 0) {
-      const files = unmergedFiles(info.mainRepoPath);
-      if (files.length === 0) {
-        this.renderer.writeLine(
-          "merge conflict detected but the conflicting file list is unavailable; run `git status` in the main repo to see them",
-          C_ERROR,
-        );
-      } else {
-        this.renderer.writeLine(`merge conflict in ${files.length} file(s):`, C_ERROR);
-        for (const f of files) this.renderer.writeLine(`  ${f}`, C_ERROR);
-      }
-      this.ui.statusSignals?.sendGitConflict();
-      this.renderer.writeLine("[a]bort  [l]eave for manual resolution  [h]elp (agent resolves)", C_TOOL);
-      const action = await this.readWorktreeKey(["a", "l", "h"]);
-      if (action === "a") {
-        spawnSync("git", ["-C", info.mainRepoPath, "merge", "--abort"], { encoding: "utf8" });
-        spawnSync("git", ["-C", info.mainRepoPath, "reset", "--merge"], { encoding: "utf8" });
-        this.renderer.writeLine("merge aborted, restored original state", C_AGENT);
-      } else if (action === "l") {
-        this.renderer.writeLine(
-          `conflict state left in ${info.mainRepoPath} for manual resolution`,
-          C_AGENT,
-        );
-      } else {
-        this.renderer.writeLine("agent resolving merge...", C_AGENT);
-        await spawnMergeAgent(
-          {
-            branch: info.branch,
-            target,
-            mainPath: info.mainRepoPath,
-            wtPath: info.worktreePath,
-            force,
-          },
-          this.runState,
-          this.ui,
-          this.chain,
-        );
-      }
-      return;
-    }
-    const commit = spawnSync(
-      "git",
-      ["-C", info.mainRepoPath, "commit", "--no-edit"],
-      { encoding: "utf8" },
-    );
-    if (commit.status === 0) {
-      spawnSync("git", ["-C", info.mainRepoPath, "worktree", "remove", ...(force ? ["--force"] : []), info.worktreePath], { encoding: "utf8" });
-      spawnSync("git", ["-C", info.mainRepoPath, "branch", force ? "-D" : "-d", info.branch], { encoding: "utf8" });
-      this.renderer.writeLine(
-        `merged '${info.branch}' into '${target}' and cleaned up`,
-        C_AGENT,
-      );
-    } else {
-      this.renderer.writeLine("merge succeeded but cleanup failed: commit failed", C_ERROR);
-    }
-  }
-
-  private async readWorktreeKey(valid: string[]): Promise<string> {
-    for (;;) {
-      const ev = await this.userEvents.next();
-      if (ev === null) return valid[valid.length - 1] ?? "a";
-      if (ev.type === "key" && ev.key.code === "char" && ev.key.ch !== undefined) {
-        const ch = ev.key.ch.toLowerCase();
-        if (valid.includes(ch)) return ch;
-      }
-      if (ev.type === "key" && (ev.key.code === "enter" || ev.key.code === "esc")) {
-        return valid.includes("a") ? "a" : (valid[0] ?? "a");
-      }
-    }
   }
 }
 
-export function applyThemeContent(content: string, renderer: Renderer): void {
-  let chatBg: import("./utils.ts").Color | null = null;
-  let inputBg: import("./utils.ts").Color | null = null;
-  let statusBg: import("./utils.ts").Color | null = null;
-  let ansi = false;
-  const roles: Record<string, string> = {};
-  for (const rawLine of content.split("\n")) {
-    const line = rawLine.trim();
-    if (line === "" || line.startsWith("#") || line.startsWith("[")) {
-      if (line === "[colors]") continue;
-      if (line.toLowerCase().includes("ansi")) ansi = true;
-      continue;
+async function setupProviderFlow(shell: PituiShell, arg: string | null): Promise<boolean> {
+  const cfg = loadSetupCfg();
+  const current = cfg.provider ?? "openrouter";
+  let name = arg;
+  if (name === null) {
+    const items: PanelItem[] = PROVIDER_NAMES.map((p) => ({
+      label: p,
+      detail: `${p === current ? "current · " : ""}${providerKeyState(cfg.apiKeys, p)}`,
+    }));
+    const idx = await shell.openPanel("provider", items, "provider | ↑↓ move | type to filter | Enter select | Esc back");
+    if (idx === null) {
+      shell.setStatus("provider selection cancelled");
+      return false;
     }
-    const eq = line.indexOf("=");
-    if (eq < 0) continue;
-    const key = line.slice(0, eq).trim();
-    const value = line.slice(eq + 1).trim().replace(/^"|"$/g, "");
-    if (key === "chat_background") chatBg = parseColorLoose(value);
-    else if (key === "input_background") inputBg = parseColorLoose(value);
-    else if (key === "status_background") statusBg = parseColorLoose(value);
-    else if (key === "scheme_type" && value === "ansi") ansi = true;
-    else if (key.startsWith("roles.")) roles[key.slice("roles.".length)] = value;
+    name = PROVIDER_NAMES[idx]!;
   }
-  const convert = (c: import("./utils.ts").Color | null): import("./utils.ts").Color | null =>
-    c !== null && ansi ? toAnsi256Loose(c) : c;
-  renderer.setBackgroundColors(convert(chatBg), convert(inputBg), convert(statusBg));
-  if (Object.keys(roles).length > 0) applyRolesLoose(roles);
-  else resetRolesLoose();
-}
-
-export function applyColorsConfig(
-  colors: NonNullable<import("./state.ts").Config["colors"]>,
-  renderer: Renderer,
-): void {
-  const ansi = colors.schemeType === "ansi";
-  const convert = (v: string | undefined): import("./utils.ts").Color | null => {
-    if (v === undefined) return null;
-    const parsed = parseColorLoose(v);
-    return parsed !== null && ansi ? toAnsi256Loose(parsed) : parsed;
-  };
-  renderer.setBackgroundColors(
-    convert(colors.chatBackground),
-    convert(colors.inputBackground),
-    convert(colors.statusBackground),
-  );
-  if (colors.roles !== undefined) applyRolesLoose(colors.roles);
-  else resetRolesLoose();
-}
-
-import { parseColor as parseColorLoose, toAnsi256 as toAnsi256Loose } from "./utils.ts";
-import { applyRoles as applyRolesLoose, resetRoles as resetRolesLoose } from "./roles.ts";
-import { spawnMergeAgent } from "./mod.ts";
-import {
-  billableInputTokens,
-  configIsAnthropicNative,
-  estimateCost,
-  realInputTokens,
-  resolveCompactEnabled,
-  resolveMidTurnCompactThreshold,
-} from "./state.ts";
-import { truncateCjk } from "./utils.ts";
-
-interface WorktreeInfo {
-  mainRepoPath: string;
-  worktreePath: string;
-  branch: string;
-}
-
-function detectWorktreeInfo(workingDir: string): WorktreeInfo | null {
-  let content: string;
+  if (!PROVIDER_NAMES.includes(name)) {
+    shell.setStatus(`unknown provider: '${name}'`);
+    return false;
+  }
+  const state = providerKeyState(cfg.apiKeys, name);
+  if (state !== "needs key") {
+    cfg.provider = name;
+    try {
+      await saveConfig(cfg);
+    } catch (e) {
+      shell.setStatus(`error: could not save provider: ${e instanceof Error ? e.message : String(e)}`);
+      return false;
+    }
+    shell.setStatus(`Provider set to ${name} (${state}).`);
+    return true;
+  }
+  const key = await shell.openMasked(`API key for ${name}`, `API key for ${name} (${providerEnvName(name)}) | Enter save | Esc cancel`);
+  if (key === null) {
+    shell.setStatus("provider key entry cancelled");
+    return false;
+  }
+  cfg.provider = name;
+  cfg.apiKeys = { ...(cfg.apiKeys ?? {}), [name]: key };
   try {
-    content = readFileSync(join(workingDir, ".git"), "utf8");
-  } catch {
-    return null;
+    await saveConfig(cfg);
+  } catch (e) {
+    shell.setStatus(`error: could not save key: ${e instanceof Error ? e.message : String(e)}`);
+    return false;
   }
-  if (!content.startsWith("gitdir:")) return null;
-  const gitdir = content.slice("gitdir:".length).trim();
-  const parts = gitdir.split("/");
-  const wtIdx = parts.indexOf("worktrees");
-  if (wtIdx < 0) return null;
-  const branch = parts[parts.length - 1] ?? "";
-  
-  const mainRepoPath = parts.slice(0, Math.max(0, wtIdx - 1)).join("/") || "/";
-  if (branch === "") return null;
-  return { mainRepoPath, worktreePath: workingDir, branch };
+  shell.setStatus(`Saved key for ${name}.`);
+  return true;
 }
 
-function defaultBranch(mainRepoPath: string): string {
-  const out = spawnSync("git", ["-C", mainRepoPath, "symbolic-ref", "--short", "HEAD"], {
-    encoding: "utf8",
-  });
-  const branch = (out.stdout ?? "").trim();
-  return branch !== "" ? branch : "main";
+async function setupModelFlow(shell: PituiShell, arg: string | null): Promise<boolean> {
+  const cfg = loadSetupCfg();
+  const provider = cfg.provider ?? "openrouter";
+  const catalog = [...(catalogEntries(provider) ?? [])];
+  const quick = Object.entries(cfg.quickModels ?? {}).sort(([a], [b]) => (a < b ? -1 : 1));
+  if (arg !== null) {
+    const hit = catalog.find((m) => m.id === arg);
+    if (hit !== undefined) {
+      cfg.model = hit.id;
+      try {
+        await saveConfig(cfg);
+        shell.setStatus(`Model set to ${hit.id} (${provider}).`);
+        return true;
+      } catch (e) {
+        shell.setStatus(`error: could not save model: ${e instanceof Error ? e.message : String(e)}`);
+      }
+      return false;
+    }
+    const q = cfg.quickModels?.[arg];
+    if (q !== undefined) {
+      cfg.provider = q.provider;
+      cfg.model = q.model;
+      try {
+        await saveConfig(cfg);
+        shell.setStatus(`Model set to ${arg} (${q.provider} / ${q.model}).`);
+        return true;
+      } catch (e) {
+        shell.setStatus(`error: could not save model: ${e instanceof Error ? e.message : String(e)}`);
+      }
+      return false;
+    }
+    shell.setStatus(`unknown model: '${arg}'`);
+    return false;
+  }
+  const items: PanelItem[] = catalog.map((m) => ({ label: m.id, detail: provider }));
+  const quickStart = items.length;
+  for (const [qname, q] of quick) items.push({ label: qname, detail: `quick · ${q.provider} / ${q.model}` });
+  const idx = await shell.openPanel(`model (${provider})`, items, "model | ↑↓ move | type to filter | Enter select | Esc back");
+  if (idx === null) {
+    shell.setStatus("model selection cancelled");
+    return false;
+  }
+  try {
+    if (idx >= quickStart) {
+      const [qname, q] = quick[idx - quickStart]!;
+      cfg.provider = q.provider;
+      cfg.model = q.model;
+      await saveConfig(cfg);
+      shell.setStatus(`Model set to ${qname} (${q.provider} / ${q.model}).`);
+    } else {
+      cfg.model = catalog[idx]!.id;
+      await saveConfig(cfg);
+      shell.setStatus(`Model set to ${catalog[idx]!.id} (${provider}).`);
+    }
+    return true;
+  } catch (e) {
+    shell.setStatus(`error: could not save model: ${e instanceof Error ? e.message : String(e)}`);
+    return false;
+  }
 }
 
-function worktreeHasUncommitted(worktreePath: string): boolean {
-  const out = spawnSync("git", ["-C", worktreePath, "status", "--porcelain"], {
-    encoding: "utf8",
-  });
-  return (out.stdout ?? "").trim() !== "";
+async function setupModelsFlow(shell: PituiShell): Promise<boolean> {
+  const cfg = loadSetupCfg();
+  const quick = Object.entries(cfg.quickModels ?? {}).sort(([a], [b]) => (a < b ? -1 : 1));
+  if (quick.length === 0) {
+    shell.setStatus("no quick models saved");
+    return false;
+  }
+  const items: PanelItem[] = quick.map(([qname, q]) => ({ label: qname, detail: `${q.provider} / ${q.model}` }));
+  const idx = await shell.openPanel("quick models", items, "quick models | ↑↓ move | type to filter | Enter select | Esc back");
+  if (idx === null) {
+    shell.setStatus("quick model selection cancelled");
+    return false;
+  }
+  const [qname, q] = quick[idx]!;
+  cfg.provider = q.provider;
+  cfg.model = q.model;
+  try {
+    await saveConfig(cfg);
+    shell.setStatus(`Model set to ${qname} (${q.provider} / ${q.model}).`);
+    return true;
+  } catch (e) {
+    shell.setStatus(`error: could not save model: ${e instanceof Error ? e.message : String(e)}`);
+    return false;
+  }
 }
 
-function unmergedFiles(mainRepoPath: string): string[] {
-  const out = spawnSync("git", ["-C", mainRepoPath, "ls-files", "-u"], {
-    encoding: "utf8",
-  });
-  return [
-    ...new Set(
-      (out.stdout ?? "")
-        .split("\n")
-        .filter((l) => l !== "")
-        .map((l) => {
-          const parts = l.split("\t");
-          return parts[parts.length - 1] ?? l;
-        }),
-    ),
+async function setupPromptFlow(shell: PituiShell, arg: string | null): Promise<void> {
+  const unique = listPromptNames();
+  if (arg !== null) {
+    if (!unique.includes(arg)) {
+      shell.setStatus(`unknown prompt: '${arg}'`);
+      return;
+    }
+    const cfg = loadSetupCfg();
+    cfg.defaultPrompt = arg;
+    try {
+      await saveConfig(cfg);
+      shell.setStatus(`Default prompt set to ${arg}.`);
+    } catch (e) {
+      shell.setStatus(`error: could not save prompt: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    return;
+  }
+  const cfg = loadSetupCfg();
+  const current = cfg.defaultPrompt;
+  const items: PanelItem[] = unique.map((name) => ({
+    label: name,
+    detail: name === current ? "current" : "",
+  }));
+  const idx = await shell.openPanel("prompt", items, "prompt | ↑↓ move | type to filter | Enter select | Esc back");
+  if (idx === null) {
+    shell.setStatus("prompt selection cancelled");
+    return;
+  }
+  cfg.defaultPrompt = unique[idx]!;
+  try {
+    await saveConfig(cfg);
+    shell.setStatus(`Default prompt set to ${unique[idx]!}.`);
+  } catch (e) {
+    shell.setStatus(`error: could not save prompt: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
+async function setupThemeFlow(shell: PituiShell, arg: string | null): Promise<void> {
+  const unique = listThemeNames();
+  if (arg !== null) {
+    if (!unique.includes(arg)) {
+      shell.setStatus(`unknown theme: '${arg}'`);
+      return;
+    }
+    if (applyTheme(arg)) shell.setStatus(`Theme set to ${arg}.`);
+    else shell.setStatus("error: could not save theme");
+    return;
+  }
+  const items: PanelItem[] = unique.map((name) => ({ label: name, detail: "" }));
+  const idx = await shell.openPanel("theme", items, "theme | ↑↓ move | type to filter | Enter select | Esc back");
+  if (idx === null) {
+    shell.setStatus("theme selection cancelled");
+    return;
+  }
+  if (applyTheme(unique[idx]!)) shell.setStatus(`Theme set to ${unique[idx]!}.`);
+  else shell.setStatus("error: could not save theme");
+}
+
+async function setupSessionsFlow(shell: PituiShell): Promise<void> {
+  const sessions = listSessionFiles();
+  const items: PanelItem[] = sessions.map((s) => ({
+    label: s.id,
+    detail: `${s.provider} / ${s.model} | ${s.messages} msgs`,
+  }));
+  const idx = await shell.openPanel("sessions", items, "sessions | ↑↓ move | type to filter | Enter detail | Esc back");
+  if (idx === null) {
+    shell.setStatus("sessions selection cancelled");
+    return;
+  }
+  const s = sessions[idx]!;
+  const detail: PanelItem[] = [
+    { label: `session: ${s.id}` },
+    { label: `provider: ${s.provider}` },
+    { label: `model: ${s.model}` },
+    { label: `messages: ${s.messages}` },
+    { label: "to resume: configure a key with /provider, then use /resume in live chat" },
   ];
+  await shell.openPanel("session detail", detail, "session detail | Enter or Esc to go back");
+  shell.setStatus(`session: ${s.id}`);
 }
+
+async function setupHelpFlow(shell: PituiShell): Promise<boolean> {
+  const items: PanelItem[] = SLASH_COMMANDS.map((name) => ({
+    label: `/${name}`,
+    detail: slashDescription(name),
+  }));
+  const idx = await shell.openPanel("commands", items, "commands | ↑↓ move | type to filter | Enter run | Esc back");
+  if (idx === null) return false;
+  const name = SLASH_COMMANDS[idx]!;
+  switch (name) {
+    case "provider":
+      await setupProviderFlow(shell, null);
+      return false;
+    case "model":
+      await setupModelFlow(shell, null);
+      return false;
+    case "models":
+      await setupModelsFlow(shell);
+      return false;
+    case "prompt":
+      await setupPromptFlow(shell, null);
+      return false;
+    case "theme":
+      await setupThemeFlow(shell, null);
+      return false;
+    case "sessions":
+      await setupSessionsFlow(shell);
+      return false;
+    case "quit":
+    case "exit":
+      return true;
+    case "help":
+      return false;
+    default:
+      shell.setStatus("This command needs a provider key. Run tiny-crow --setup after leaving this screen.");
+      return false;
+  }
+}
+
+export async function runPituiSetupMode(): Promise<boolean> {
+  const feed = [
+    "No provider API key is configured yet, so live chat is not available.",
+    "",
+    "To configure a provider here, open /provider and pick one.",
+    "After a provider is ready, this screen switches to live chat automatically.",
+    "",
+    "Or set the provider key in your environment or config, then start again.",
+    "Type /quit to leave, /help to see commands.",
+  ];
+  const shell = new PituiShell(feed, "setup mode | /quit to leave");
+  shell.submitHandler = async (text: string) => {
+    let checkTransition = false;
+    if (text === "/quit" || text === "/exit") {
+      shell.requestQuit();
+    } else if (text === "") {
+    } else if (text.startsWith("/")) {
+      const parts = text.slice(1).split(/\s+/);
+      const cmd = parts[0] ?? "";
+      const arg = parts[1] ?? null;
+      switch (cmd) {
+        case "provider":
+          checkTransition = await setupProviderFlow(shell, arg);
+          break;
+        case "model":
+          checkTransition = await setupModelFlow(shell, arg);
+          break;
+        case "models":
+          checkTransition = await setupModelsFlow(shell);
+          break;
+        case "prompt":
+          await setupPromptFlow(shell, arg);
+          break;
+        case "theme":
+          await setupThemeFlow(shell, arg);
+          break;
+        case "sessions":
+          await setupSessionsFlow(shell);
+          break;
+        case "help":
+          if (await setupHelpFlow(shell)) shell.requestQuit();
+          else checkTransition = true;
+          break;
+        default:
+          shell.setStatus("This command needs a provider key. Configure a provider first with /provider.");
+          break;
+      }
+    } else {
+      const cfg = loadSetupCfg();
+      if (setupReadyFromConfig(cfg) && (cfg.model ?? "") !== "") {
+        shell.ready = true;
+        shell.requestQuit();
+      } else {
+        shell.setStatus("Configure a provider first with /provider, then chat here.");
+      }
+    }
+    if (checkTransition) {
+      const cfg = loadSetupCfg();
+      if (setupReadyFromConfig(cfg)) {
+        if ((cfg.model ?? "") === "") {
+          await setupModelFlow(shell, null);
+          const afterModel = loadSetupCfg();
+          if (setupReadyFromConfig(afterModel) && (afterModel.model ?? "") !== "") {
+            shell.ready = true;
+            shell.requestQuit();
+          }
+        } else {
+          shell.ready = true;
+          shell.requestQuit();
+        }
+      }
+    }
+  };
+  return shell.run();
+}
+
