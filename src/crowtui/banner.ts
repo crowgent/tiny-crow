@@ -28,8 +28,6 @@ export function setupGuideLines(provider: string, model: string): string[] {
     `Current provider: ${provider}   Model: ${model}`,
     "",
     "To configure a provider here, open /provider and pick one.",
-    "Or quit this screen and run:",
-    "  tiny-crow --setup",
     "",
     "Or set the provider key in your environment or config, then start again.",
     "Type /quit to leave, /help to see commands.",

@@ -11,7 +11,7 @@ export async function run(): Promise<void> {
   installPanicHook();
   initLogging(cli);
 
-  const [cfg, isFirstStartup] = load();
+  let [cfg, isFirstStartup] = load();
 
   try {
     mergeCliMcp(cli, cfg);
@@ -92,54 +92,70 @@ export async function run(): Promise<void> {
     }
   }
 
-  let startup: Startup;
-  try {
-    startup = await Startup.init(cli, cfg, {
-      isFirstStartup,
-      versionChanged,
-      isInteractive,
-    });
-  } catch (e) {
-    if (isInteractive && e instanceof Error && e.message.includes("No API key found")) {
-      await runCrowSetupMode();
-      return;
-    }
-    throw e;
-  }
-
-  if (startup.cli.acpEnabled) {
-    let extras: Record<string, unknown>;
+  let setupRounds = 0;
+  while (true) {
+    let startup: Startup;
     try {
-      extras = (await import("./extras/acp/mod.ts")) as Record<string, unknown>;
+      startup = await Startup.init(cli, cfg, {
+        isFirstStartup,
+        versionChanged,
+        isInteractive,
+      });
     } catch (e) {
-      throw new Error(`extras slice not available for ACP mode (./extras/acp/mod.ts): ${e}`);
+      if (isInteractive && e instanceof Error && e.message.includes("No API key found") && setupRounds < 3) {
+        setupRounds++;
+        const ready = await runCrowSetupMode();
+        if (!ready) return;
+        const reloaded = load();
+        cfg = reloaded[0];
+        isFirstStartup = reloaded[1];
+        mergeCliMcp(cli, cfg);
+        continue;
+      }
+      throw e;
     }
-    const serve = extras["serve"] as
-      | ((options: Record<string, unknown>) => Promise<void>)
-      | undefined;
-    if (!serve) throw new Error("extras slice does not export serve");
-    await serve({
-      host: startup.cli.acpHost ?? null,
-      port: startup.cli.acpPort ?? null,
-      provider: startup.provider,
-      model: startup.model,
-      apiKeys: startup.cfg.apiKeys ?? null,
-      cli: startup.cli,
-      cfg: startup.cfg,
-    });
-    return;
-  }
 
-  try {
-    await startup.initFeatures();
-    await startup.resolvePrompts();
-    await startup.dispatch();
-  } catch (e) {
-    if (isInteractive && e instanceof Error && e.message.includes("No API key found")) {
-      await runCrowSetupMode();
+    if (startup.cli.acpEnabled) {
+      let extras: Record<string, unknown>;
+      try {
+        extras = (await import("./extras/acp/mod.ts")) as Record<string, unknown>;
+      } catch (e) {
+        throw new Error(`extras slice not available for ACP mode (./extras/acp/mod.ts): ${e}`);
+      }
+      const serve = extras["serve"] as
+        | ((options: Record<string, unknown>) => Promise<void>)
+        | undefined;
+      if (!serve) throw new Error("extras slice does not export serve");
+      await serve({
+        host: startup.cli.acpHost ?? null,
+        port: startup.cli.acpPort ?? null,
+        provider: startup.provider,
+        model: startup.model,
+        apiKeys: startup.cfg.apiKeys ?? null,
+        cli: startup.cli,
+        cfg: startup.cfg,
+      });
       return;
     }
-    throw e;
+
+    try {
+      await startup.initFeatures();
+      await startup.resolvePrompts();
+      await startup.dispatch();
+      return;
+    } catch (e) {
+      if (isInteractive && e instanceof Error && e.message.includes("No API key found") && setupRounds < 3) {
+        setupRounds++;
+        const ready = await runCrowSetupMode();
+        if (!ready) return;
+        const reloaded = load();
+        cfg = reloaded[0];
+        isFirstStartup = reloaded[1];
+        mergeCliMcp(cli, cfg);
+        continue;
+      }
+      throw e;
+    }
   }
 }
 

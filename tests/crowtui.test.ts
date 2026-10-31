@@ -4,6 +4,7 @@ import { centerText, crowBannerLines, centeredBanner } from "../src/crowtui/bann
 import { parseKeys } from "../src/crowtui/keys.ts";
 import { LineInput } from "../src/crowtui/input.ts";
 import { slashCandidates, pickerWindow, SLASH_COMMANDS, PROVIDER_NAMES, slashDescription } from "../src/crowtui/slash.ts";
+import { setupReadyFromConfig } from "../src/crowtui/app.ts";
 import { windowPanelRows } from "../src/crowtui/panel.ts";
 import { Screen, wrapLine } from "../src/crowtui/screen.ts";
 
@@ -212,4 +213,19 @@ test("panel_window_follows_selection", () => {
   assert.equal(deep.selected, 8);
   const empty = windowPanelRows([], 0, 8);
   assert.deepEqual(empty.rows, ["  (none)"]);
+});
+
+test("setup_ready_from_config", () => {
+  const saved = process.env["OPENROUTER_API_KEY"];
+  delete process.env["OPENROUTER_API_KEY"];
+  try {
+    assert.equal(setupReadyFromConfig({ provider: "ollama", apiKeys: {} }), true);
+    assert.equal(setupReadyFromConfig({ provider: "openrouter", apiKeys: {} }), false);
+    assert.equal(setupReadyFromConfig({ provider: "openrouter", apiKeys: { openrouter: "dummy" } }), true);
+    process.env["OPENROUTER_API_KEY"] = "dummy";
+    assert.equal(setupReadyFromConfig({ provider: "openrouter", apiKeys: {} }), true);
+  } finally {
+    if (saved === undefined) delete process.env["OPENROUTER_API_KEY"];
+    else process.env["OPENROUTER_API_KEY"] = saved;
+  }
 });

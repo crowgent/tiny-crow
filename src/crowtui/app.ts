@@ -162,6 +162,14 @@ function providerKeyState(apiKeys: Record<string, string> | undefined, name: str
   return "needs key";
 }
 
+export function setupReadyFromConfig(cfg: {
+  provider?: string | null;
+  apiKeys?: Record<string, string> | null;
+}): boolean {
+  const provider = cfg.provider ?? "openrouter";
+  return providerKeyState(cfg.apiKeys ?? undefined, provider) !== "needs key";
+}
+
 interface SessionFileInfo {
   id: string;
   provider: string;
@@ -538,8 +546,58 @@ export class CrowApp {
     try {
       const history = this.ui.convertHistory(this.ui.session);
       const runner = await this.runState.agent.spawnRunner(text, history, this.ui.cfg.retry);
-      this.runState.agentRx = runner.events;
-      this.runState.mainAbort = runner.abortHandle;
+      const raw = runner as unknown as {
+        events?: unknown;
+        abortHandle?: { abort(): void };
+        abort?: () => void;
+      };
+      const rawEvents = raw.events as { tryNext?: unknown } | undefined;
+      if (raw.abortHandle !== undefined && rawEvents !== undefined && typeof rawEvents.tryNext === "function") {
+        this.runState.agentRx = runner.events;
+        this.runState.mainAbort = runner.abortHandle;
+      } else {
+        const queue = new EventQueue<AgentEvent>();
+        this.runState.agentRx = queue;
+        this.runState.mainAbort = {
+          abort: () => {
+            try {
+              raw.abort?.();
+            } catch {
+            }
+          },
+        };
+        void (async () => {
+          try {
+            const iterable = raw.events as AsyncIterable<Record<string, unknown>>;
+            for await (const ev of iterable) {
+              const type = ev["type"];
+              if (type === "token" && typeof ev["text"] === "string") {
+                queue.push({ type: "token", text: ev["text"] as string });
+              } else if (type === "reasoning" && typeof ev["text"] === "string") {
+                queue.push({ type: "reasoning", text: ev["text"] as string });
+              } else if (type === "done") {
+                queue.push({
+                  type: "done",
+                  response: typeof ev["output"] === "string" ? (ev["output"] as string) : "",
+                  inputTokens: 0,
+                  outputTokens: 0,
+                  cachedInputTokens: 0,
+                  cacheCreationInputTokens: 0,
+                });
+              } else if (type === "error") {
+                queue.push({
+                  type: "error",
+                  message: typeof ev["message"] === "string" ? (ev["message"] as string) : "agent error",
+                });
+              }
+            }
+          } catch (e) {
+            queue.push({ type: "error", message: e instanceof Error ? e.message : String(e) });
+          } finally {
+            queue.close();
+          }
+        })();
+      }
       this.runState.isRunning = true;
       this.running = true;
       this.ui.statusSignals?.sendStart();
@@ -1014,7 +1072,7 @@ async function setupProviderFlow(
   screen: Screen,
   keys: KeyPump,
   arg: string | null,
-): Promise<void> {
+): Promise<boolean> {
   const cfg = await loadSetupCfg();
   const current = cfg.provider ?? "openrouter";
   let name = arg;
@@ -1024,12 +1082,12 @@ async function setupProviderFlow(
       detail: `${p === current ? "current · " : ""}${providerKeyState(cfg.apiKeys, p)}`,
     }));
     const idx = await runPanel(screen, keys, "provider | ↑↓ move | type to filter | Enter select | Esc back", items);
-    if (idx === null) return;
+    if (idx === null) return false;
     name = PROVIDER_NAMES[idx]!;
   }
   if (!PROVIDER_NAMES.includes(name)) {
     screen.writeLine(`unknown provider: '${name}'`, ANSI_ERROR);
-    return;
+    return false;
   }
   const state = providerKeyState(cfg.apiKeys, name);
   if (state !== "needs key") {
@@ -1038,29 +1096,30 @@ async function setupProviderFlow(
       await saveConfig(cfg);
     } catch (e) {
       screen.writeLine(`error: could not save provider: ${e instanceof Error ? e.message : String(e)}`, ANSI_ERROR);
-      return;
+      return false;
     }
-    screen.writeLine(`Provider set to ${name} (${state}). Quit and run tiny-crow again to start chatting.`, ANSI_GREEN);
-    return;
+    screen.writeLine(`Provider set to ${name} (${state}).`, ANSI_GREEN);
+    return true;
   }
   const key = await runMaskedEntry(screen, keys, `API key for ${name} (${providerEnvName(name)}) | Enter save | Esc cancel`);
-  if (key === null) return;
+  if (key === null) return false;
   cfg.provider = name;
   cfg.apiKeys = { ...(cfg.apiKeys ?? {}), [name]: key };
   try {
     await saveConfig(cfg);
   } catch (e) {
     screen.writeLine(`error: could not save key: ${e instanceof Error ? e.message : String(e)}`, ANSI_ERROR);
-    return;
+    return false;
   }
-  screen.writeLine(`Saved key for ${name}. Quit and run tiny-crow again to start chatting.`, ANSI_GREEN);
+  screen.writeLine(`Saved key for ${name}.`, ANSI_GREEN);
+  return true;
 }
 
 async function setupModelFlow(
   screen: Screen,
   keys: KeyPump,
   arg: string | null,
-): Promise<void> {
+): Promise<boolean> {
   const cfg = await loadSetupCfg();
   const provider = cfg.provider ?? "openrouter";
   const catalog: ModelEntry[] = [...(catalogEntries(provider) ?? [])];
@@ -1071,11 +1130,12 @@ async function setupModelFlow(
       cfg.model = hit.id;
       try {
         await saveConfig(cfg);
-        screen.writeLine(`Model set to ${hit.id} (${provider}). Quit and run tiny-crow again to start chatting.`, ANSI_GREEN);
+        screen.writeLine(`Model set to ${hit.id} (${provider}).`, ANSI_GREEN);
+        return true;
       } catch (e) {
         screen.writeLine(`error: could not save model: ${e instanceof Error ? e.message : String(e)}`, ANSI_ERROR);
       }
-      return;
+      return false;
     }
     const q = cfg.quickModels?.[arg];
     if (q !== undefined) {
@@ -1083,51 +1143,56 @@ async function setupModelFlow(
       cfg.model = q.model;
       try {
         await saveConfig(cfg);
-        screen.writeLine(`Model set to ${arg} (${q.provider} / ${q.model}). Quit and run tiny-crow again to start chatting.`, ANSI_GREEN);
+        screen.writeLine(`Model set to ${arg} (${q.provider} / ${q.model}).`, ANSI_GREEN);
+        return true;
       } catch (e) {
         screen.writeLine(`error: could not save model: ${e instanceof Error ? e.message : String(e)}`, ANSI_ERROR);
       }
-      return;
+      return false;
     }
     screen.writeLine(`unknown model: '${arg}'`, ANSI_ERROR);
-    return;
+    return false;
   }
   const items: PanelItem[] = catalog.map((m) => ({ label: m.id, detail: provider }));
   const quickStart = items.length;
   for (const [qname, q] of quick) items.push({ label: qname, detail: `quick · ${q.provider} / ${q.model}` });
   const idx = await runPanel(screen, keys, `model (${provider}) | ↑↓ move | type to filter | Enter select | Esc back`, items);
-  if (idx === null) return;
+  if (idx === null) return false;
   try {
     if (idx >= quickStart) {
       const [qname, q] = quick[idx - quickStart]!;
       cfg.provider = q.provider;
       cfg.model = q.model;
       await saveConfig(cfg);
-      screen.writeLine(`Model set to ${qname} (${q.provider} / ${q.model}). Quit and run tiny-crow again to start chatting.`, ANSI_GREEN);
+      screen.writeLine(`Model set to ${qname} (${q.provider} / ${q.model}).`, ANSI_GREEN);
     } else {
       cfg.model = catalog[idx]!.id;
       await saveConfig(cfg);
-      screen.writeLine(`Model set to ${catalog[idx]!.id} (${provider}). Quit and run tiny-crow again to start chatting.`, ANSI_GREEN);
+      screen.writeLine(`Model set to ${catalog[idx]!.id} (${provider}).`, ANSI_GREEN);
     }
+    return true;
   } catch (e) {
     screen.writeLine(`error: could not save model: ${e instanceof Error ? e.message : String(e)}`, ANSI_ERROR);
+    return false;
   }
 }
 
-async function setupModelsFlow(screen: Screen, keys: KeyPump): Promise<void> {
+async function setupModelsFlow(screen: Screen, keys: KeyPump): Promise<boolean> {
   const cfg = await loadSetupCfg();
   const quick = Object.entries(cfg.quickModels ?? {}).sort(([a], [b]) => (a < b ? -1 : 1));
   const items: PanelItem[] = quick.map(([qname, q]) => ({ label: qname, detail: `${q.provider} / ${q.model}` }));
   const idx = await runPanel(screen, keys, "quick models | ↑↓ move | type to filter | Enter select | Esc back", items);
-  if (idx === null) return;
+  if (idx === null) return false;
   const [qname, q] = quick[idx]!;
   cfg.provider = q.provider;
   cfg.model = q.model;
   try {
     await saveConfig(cfg);
-    screen.writeLine(`Model set to ${qname} (${q.provider} / ${q.model}). Quit and run tiny-crow again to start chatting.`, ANSI_GREEN);
+    screen.writeLine(`Model set to ${qname} (${q.provider} / ${q.model}).`, ANSI_GREEN);
+    return true;
   } catch (e) {
     screen.writeLine(`error: could not save model: ${e instanceof Error ? e.message : String(e)}`, ANSI_ERROR);
+    return false;
   }
 }
 
@@ -1220,7 +1285,7 @@ async function setupSessionsFlow(screen: Screen, keys: KeyPump): Promise<void> {
     { label: `provider: ${s.provider}` },
     { label: `model: ${s.model}` },
     { label: `messages: ${s.messages}` },
-    { label: "to resume: configure a key with /provider, then restart and use /resume" },
+    { label: "to resume: configure a key with /provider, then use /resume in live chat" },
   ];
   await runPanel(screen, keys, "session detail | Enter or Esc to go back", detail);
 }
@@ -1263,7 +1328,7 @@ async function setupHelpFlow(screen: Screen, keys: KeyPump): Promise<boolean> {
   }
 }
 
-export async function runCrowSetupMode(): Promise<void> {
+export async function runCrowSetupMode(): Promise<boolean> {
   const screen = new Screen();
   const input = new LineInput();
   const keys = new KeyPump();
@@ -1278,8 +1343,7 @@ export async function runCrowSetupMode(): Promise<void> {
   screen.writeLine("No provider API key is configured yet, so live chat is not available.", ANSI_SYSTEM);
   screen.writeLine("", ANSI_SYSTEM);
   screen.writeLine("To configure a provider here, open /provider and pick one.", ANSI_SYSTEM);
-  screen.writeLine("Or quit this screen and run:", ANSI_SYSTEM);
-  screen.writeLine("  tiny-crow --setup", ANSI_SYSTEM);
+  screen.writeLine("After a provider is ready, this screen switches to live chat automatically.", ANSI_SYSTEM);
   screen.writeLine("", ANSI_SYSTEM);
   screen.writeLine("Or set the provider key in your environment or config, then start again.", ANSI_SYSTEM);
   screen.writeLine("Type /quit to leave, /help to see commands.", ANSI_SYSTEM);
@@ -1298,7 +1362,8 @@ export async function runCrowSetupMode(): Promise<void> {
   });
   try {
     let quit = false;
-    while (!quit) {
+    let ready = false;
+    while (!quit && !ready) {
       renderSetup();
       const key = await keys.next(0);
       if (key === null) continue;
@@ -1334,6 +1399,7 @@ export async function runCrowSetupMode(): Promise<void> {
         const text = (applied ?? input.value()).trim();
         input.pushHistory(text);
         input.clear();
+        let checkTransition = false;
         if (text === "/quit" || text === "/exit") {
           quit = true;
         } else if (text === "") {
@@ -1343,13 +1409,13 @@ export async function runCrowSetupMode(): Promise<void> {
           const arg = parts[1] ?? null;
           switch (cmd) {
             case "provider":
-              await setupProviderFlow(screen, keys, arg);
+              checkTransition = await setupProviderFlow(screen, keys, arg);
               break;
             case "model":
-              await setupModelFlow(screen, keys, arg);
+              checkTransition = await setupModelFlow(screen, keys, arg);
               break;
             case "models":
-              await setupModelsFlow(screen, keys);
+              checkTransition = await setupModelsFlow(screen, keys);
               break;
             case "prompt":
               await setupPromptFlow(screen, keys, arg);
@@ -1362,13 +1428,31 @@ export async function runCrowSetupMode(): Promise<void> {
               break;
             case "help":
               if (await setupHelpFlow(screen, keys)) quit = true;
+              else checkTransition = true;
               break;
             default:
-              screen.writeLine("This command needs a provider key. Run tiny-crow --setup after leaving this screen.", ANSI_MUTED);
+              screen.writeLine("This command needs a provider key. Configure a provider first with /provider.", ANSI_MUTED);
               break;
           }
         } else {
-          screen.writeLine("Live chat needs a provider key. Run tiny-crow --setup after leaving this screen.", ANSI_MUTED);
+          const cfg = await loadSetupCfg();
+          if (setupReadyFromConfig(cfg) && (cfg.model ?? "") !== "") {
+            ready = true;
+          } else {
+            screen.writeLine("Configure a provider first with /provider, then chat here.", ANSI_MUTED);
+          }
+        }
+        if (!quit && checkTransition) {
+          const cfg = await loadSetupCfg();
+          if (setupReadyFromConfig(cfg)) {
+            if ((cfg.model ?? "") === "") {
+              await setupModelFlow(screen, keys, null);
+              const afterModel = await loadSetupCfg();
+              if (setupReadyFromConfig(afterModel) && (afterModel.model ?? "") !== "") ready = true;
+            } else {
+              ready = true;
+            }
+          }
         }
         continue;
       }
@@ -1383,6 +1467,7 @@ export async function runCrowSetupMode(): Promise<void> {
       if (key.kind === "pageup" || key.kind === "pagedown") continue;
       input.handleKey(key);
     }
+    return ready;
   } finally {
     keys.detach();
     screen.leave();

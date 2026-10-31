@@ -1114,6 +1114,18 @@ export class Startup {
   async dispatchInteractive(): Promise<void> {
     const initialMsg = this.cli.message.join(" ");
     if (initialMsg) addSessionMessage(this.session, "user", initialMsg);
+    if (typeof (this.session as unknown as { addMessage?: unknown }).addMessage !== "function") {
+      try {
+        const sessionSlice = (await import("./session/mod.ts")) as Record<string, unknown>;
+        const SessionCtor = sessionSlice["Session"] as
+          | (new (init: Record<string, unknown>) => unknown)
+          | undefined;
+        if (SessionCtor) {
+          this.session = new SessionCtor({ ...this.session }) as unknown as SessionLike;
+        }
+      } catch {
+      }
+    }
     
     let stateMod: Record<string, unknown>;
     let appMod: Record<string, unknown>;

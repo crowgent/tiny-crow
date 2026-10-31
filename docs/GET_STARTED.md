@@ -231,10 +231,12 @@ command. Commands such as /provider, /model, /models, /prompt, /theme,
 the arrow keys, type to filter, Enter to choose, Esc to go back. In
 setup mode (no provider key yet), /provider also asks for the key
 inside the TUI and saves it, without ever showing the key on screen.
+Once a provider is ready, setup mode switches to live chat in the
+same process, with no quit and restart needed.
 
 If no provider API key is configured yet, the terminal UI still opens and
 shows setup guidance instead of exiting. Live chat needs a real key, which
-you can configure with `tiny-crow --setup`.
+you can configure with /provider inside the TUI or with `tiny-crow --setup`.
 
 The banner stays fixed at the top while the feed scrolls below it, and the
 screen repaints cleanly on resize. Typing `/` opens the command picker

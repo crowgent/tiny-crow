@@ -1116,6 +1116,10 @@ export class AnyClient {
     throw new Error(`completionModel not supported for provider ${this.kind}`);
   }
 
+  async buildAgent(model: AnyModel, build: AgentBuild): Promise<AnyAgent> {
+    return buildAgent(model, build);
+  }
+
   async listModels(): Promise<ModelEntry[]> {
     const base = this.baseUrl.replace(/\/$/, "");
     const headers = authHeaders({
@@ -1272,6 +1276,10 @@ export class OpencodeClient {
       kind: "openai",
       value: route === "responses" ? { route: "responses", model } : { route: "completions", model },
     };
+  }
+
+  async buildAgent(model: AnyModel, build: AgentBuild): Promise<AnyAgent> {
+    return buildAgent(model, build);
   }
 
   async listModels(): Promise<ModelEntry[]> {

@@ -417,3 +417,10 @@ test("completion_client_survives_stream_longer_than_metadata_deadline", async ()
     server.close();
   }
 });
+
+test("clients expose buildAgent for the interactive UI", () => {
+  const ollama = createClient("ollama", null, {}, null) as unknown as { buildAgent?: unknown };
+  assert.equal(typeof ollama.buildAgent, "function");
+  const zen = createClient("opencode-zen", null, {}, null) as unknown as { buildAgent?: unknown };
+  assert.equal(typeof zen.buildAgent, "function");
+});
